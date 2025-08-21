@@ -8,7 +8,7 @@ export default function Home() {
   if (session) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen py-2">
-        Signed in as {session.user?.email} <br />
+        Signed in as {session.user?.id} <br />
         <button
           className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md"
           onClick={() => signOut()}
