@@ -30,7 +30,7 @@ export default function LINEletter() {
             disabled={!selectedTemplate}
             onClick={() => {
               router.push(
-                `/line-letter-desktop/letter-editor/${selectedTemplate}`
+                `/line-letter-desktop/letter-editor/?template=${selectedTemplate}`
               );
             }}
           >
