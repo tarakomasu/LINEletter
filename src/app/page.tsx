@@ -4,7 +4,7 @@ import { useSession, signIn, signOut } from "next-auth/react"
 
 export default function Home() {
   const { data: session } = useSession()
-
+  console.log(session)
   if (session) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen py-2">
