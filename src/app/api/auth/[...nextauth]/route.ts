@@ -1,6 +1,32 @@
+// src/pages/api/auth/[...nextauth].ts
+import LineProvider from "next-auth/providers/line"
 import NextAuth from "next-auth"
-import { authOptions } from "./auth-options"
 
-const handler = NextAuth(authOptions)
+export default NextAuth({
+  providers: [
+    LineProvider({
+      clientId: process.env.LINE_CLIENT_ID ?? "",
+      clientSecret: process.env.LINE_CLIENT_SECRET ?? "",
+      checks: ["state"],
+    })
+  ],
+  callbacks: {
+    session: async ({ session, token }) => {
+      if (session?.user) {
+        session.user.id = token.sub as string
+      }
+      return session
+    },
+  },
+  session: {
+    strategy: "jwt", 
+  },
+})
 
-export { handler as GET, handler as POST }
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+    }
+  }
+}
