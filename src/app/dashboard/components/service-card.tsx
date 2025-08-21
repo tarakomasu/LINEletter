@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation"
 
 export const cardData = [
   {
-    title: "Card 1",
-    description: "This is a short description for card 1.",
+    title: "LINEletter",
+    description: "LINEletterは、あなたが作った手紙をLINEで送れるサービスです。作った手紙はLINE以外でも送信、保存ができます",
     imageUrl: "https://placehold.co/600x400?text=Card+1",
-    path: "/card1",
+    path: "/line-letter",
   },
   {
     title: "Card 2",
