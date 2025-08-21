@@ -29,7 +29,7 @@ export default function LINEletter() {
             className="px-6 py-3 bg-blue-600 text-white rounded-md disabled:bg-gray-400"
             disabled={!selectedTemplate}
             onClick={() => {
-              router.push(`/line-letter/${selectedTemplate}`);
+              router.push(`/letter-editor/${selectedTemplate}`);
             }}
           >
             Continue
