@@ -39,7 +39,7 @@ export function ServiceCard(
         height={400}
         className="w-full h-48 object-cover cursor-pointer"
         onClick={() => {
-          router.push(`${card.path + -devise}`);
+          router.push(`${card.path}` + `-${devise}`);
         }}
       />
       <div className="p-6">

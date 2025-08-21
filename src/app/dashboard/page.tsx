@@ -14,7 +14,9 @@ export default function Dashboard() {
       redirect("/")
     },
   })
+  console.log(isMobile)
   const userDevice = isMobile ? "mobile" : "desktop"
+  console.log(userDevice)
   return (
     <div className="min-h-screen bg-gray-100">
       <Hero />
