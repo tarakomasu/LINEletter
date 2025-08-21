@@ -1,9 +1,18 @@
 "use client";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function LineLetterPage() {
+function TemplateContent() {
   const searchParams = useSearchParams();
   const template = searchParams.get("selectedTemplate");
 
   return <div>選ばれたテンプレート: {template}</div>;
+}
+
+export default function LineLetterPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <TemplateContent />
+    </Suspense>
+  );
 }
