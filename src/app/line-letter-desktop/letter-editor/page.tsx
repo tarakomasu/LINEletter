@@ -30,8 +30,8 @@ export default function LetterEditor() {
         })
       })
 
-      canvas.on('selection:created', (e) => setSelectedObject(e.selected[0]))
-      canvas.on('selection:updated', (e) => setSelectedObject(e.selected[0]))
+      canvas.on('selection:created', (e) => setSelectedObject(e.selected?.[0] ?? null))
+      canvas.on('selection:updated', (e) => setSelectedObject(e.selected?.[0] ?? null))
       canvas.on('selection:cleared', () => setSelectedObject(null))
     }
 
