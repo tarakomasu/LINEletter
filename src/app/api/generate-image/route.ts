@@ -5,19 +5,10 @@ import fs from "fs/promises";
 
 // Define the structure of the request body
 interface SharpObject {
-  type: "text" | "image";
+  type: "raster";
+  src: string; // Expecting data URL for the rasterized object
   left?: number;
   top?: number;
-  width?: number;
-  height?: number;
-  angle?: number;
-  // Text specific
-  text?: string;
-  fontSize?: number;
-  fill?: string;
-  fontFamily?: string;
-  // Image specific
-  src?: string; // Expecting data URL for images
 }
 
 interface RequestBody {
@@ -26,29 +17,6 @@ interface RequestBody {
   background: string;
   objects: SharpObject[];
 }
-
-// Function to create an SVG for text rendering
-const createTextSvg = (obj: SharpObject): Buffer => {
-  const { text, fontSize, fill, fontFamily, width, height } = obj;
-  // A simple SVG with basic text styling.
-  const svg = `
-        <svg width="${Math.round(width || 100)}" height="${Math.round(
-    height || 100
-  )}">
-            <style>
-                .title { 
-                    fill: ${fill}; 
-                    font-size: ${fontSize}px; 
-                    font-family: ${fontFamily}; 
-                }
-            </style>
-            <text x="0" y="${
-              fontSize! * 0.8
-            }" class="title">${text}</text>
-        </svg>
-    `;
-  return Buffer.from(svg);
-};
 
 export async function POST(req: NextRequest) {
   try {
@@ -72,60 +40,32 @@ export async function POST(req: NextRequest) {
     const backgroundPath = path.join(process.cwd(), "public", background);
     let image = sharp(backgroundPath).resize(width, height);
 
-    // Prepare composite layers
-    const compositeLayers = await Promise.all(
-      objects.map(async (obj) => {
-        let buffer: Buffer;
-        let layer: sharp.Sharp;
+    // Prepare composite layers from the already rasterized objects
+    const compositeLayers = objects.map((obj) => {
+      if (obj.type !== "raster" || !obj.src) {
+        return null;
+      }
 
-        if (obj.type === "text") {
-          buffer = createTextSvg(obj);
-          // Render SVG at a higher density for better quality, then resize.
-          layer = sharp(buffer, { density: 300 });
-        } else if (obj.type === "image" && obj.src) {
-          const base64Data = obj.src.split(";base64,").pop();
-          if (!base64Data) {
-            // This might be a relative URL, try to resolve it
-            const imagePath = path.join(process.cwd(), "public", obj.src);
-            try {
-              await fs.access(imagePath);
-              buffer = await fs.readFile(imagePath);
-            } catch (e) {
-              throw new Error(`Invalid image src: ${obj.src}`);
-            }
-          } else {
-            buffer = Buffer.from(base64Data, "base64");
-          }
-          layer = sharp(buffer);
-        } else {
-          return null; // Skip unknown objects
-        }
+      const base64Data = obj.src.split(";base64,").pop();
+      if (!base64Data) {
+        return null;
+      }
 
-        if (obj.width && obj.height) {
-          layer = layer.resize(
-            Math.round(obj.width),
-            Math.round(obj.height)
-          );
-        }
-        if (obj.angle) {
-          layer = layer.rotate(obj.angle, {
-            background: { r: 0, g: 0, b: 0, alpha: 0 },
-          });
-        }
+      const buffer = Buffer.from(base64Data, "base64");
 
-        return {
-          input: await layer.toBuffer(),
-          left: Math.round(obj.left || 0),
-          top: Math.round(obj.top || 0),
-        };
-      })
-    );
+      return {
+        input: buffer,
+        left: Math.round(obj.left || 0),
+        top: Math.round(obj.top || 0),
+      };
+    });
 
     const validLayers = compositeLayers.filter(Boolean) as {
       input: Buffer;
       left: number;
       top: number;
     }[];
+
     image = image.composite(validLayers);
 
     // Save the final image

@@ -173,38 +173,17 @@ export default function LetterEditor() {
       return;
     }
 
-    const sharpObjects = activeCanvas
-      .getObjects()
-      .map((obj) => {
-        const common = {
-          left: obj.left,
-          top: obj.top,
-          width: obj.getScaledWidth(),
-          height: obj.getScaledHeight(),
-          angle: obj.angle,
-        };
-
-        if (obj.type === "i-text") {
-          const textObj = obj as fabric.IText;
-          return {
-            type: "text",
-            text: textObj.text,
-            fontSize: textObj.fontSize,
-            fill: textObj.fill,
-            fontFamily: textObj.fontFamily,
-            ...common,
-          };
-        } else if (obj.type === "image") {
-          const imgObj = obj as fabric.Image;
-          return {
-            type: "image",
-            src: imgObj.getSrc(), // This will be a data: URL
-            ...common,
-          };
-        }
-        return null;
-      })
-      .filter(Boolean);
+    const sharpObjects = activeCanvas.getObjects().map((obj) => {
+      // For each object, generate a Data URL. This captures the current state,
+      // including rotation, scaling, and filters.
+      const dataUrl = obj.toDataURL({ format: "png" });
+      return {
+        type: "raster", // We send a rasterized imageRepresentation
+        src: dataUrl,
+        left: obj.left,
+        top: obj.top,
+      };
+    });
 
     const dataForSharp = {
       width: activeCanvas.width,
