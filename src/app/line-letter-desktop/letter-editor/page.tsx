@@ -7,6 +7,19 @@ interface Page {
   background: string;
 }
 
+const availableFonts = [
+  { name: "Arial", value: "Arial, sans-serif" },
+  { name: "Times New Roman", value: "'Times New Roman', serif" },
+  { name: "Courier New", value: "'Courier New', monospace" },
+  { name: "Georgia", value: "Georgia, serif" },
+  {
+    name: "ヒラギノ角ゴ ProN",
+    value: "'Hiragino Kaku Gothic ProN', sans-serif",
+  },
+  { name: "游ゴシック", value: "'Yu Gothic', sans-serif" },
+  { name: "MS Pゴシック", value: "'MS P Gothic', sans-serif" },
+];
+
 export default function LetterEditor() {
   const [pages, setPages] = useState<Page[]>([
     { background: "/template-papers/sea.png" },
@@ -24,6 +37,9 @@ export default function LetterEditor() {
   // State for text properties
   const [fontSize, setFontSize] = useState<number>(40);
   const [fontColor, setFontColor] = useState<string>("#000000");
+  const [fontFamily, setFontFamily] = useState<string>(
+    "'Times New Roman', serif"
+  );
 
   useEffect(() => {
     // In a real app, you might fetch this from an API.
@@ -89,6 +105,7 @@ export default function LetterEditor() {
       const textObject = selectedObject as fabric.IText;
       setFontSize(textObject.fontSize || 40);
       setFontColor((textObject.fill as string) || "#000000");
+      setFontFamily(textObject.fontFamily || "'Times New Roman', serif");
     }
   }, [selectedObject]);
 
@@ -120,6 +137,7 @@ export default function LetterEditor() {
       top: 100,
       fontSize: 40,
       fill: "#000",
+      fontFamily: "'Times New Roman', serif",
     });
     activeCanvas.add(text);
     activeCanvas.renderAll();
@@ -131,27 +149,93 @@ export default function LetterEditor() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const blobUrl = URL.createObjectURL(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      fabric.Image.fromURL(dataUrl, (image) => {
+        image.scaleToWidth(200);
+        activeCanvas.add(image);
+        activeCanvas.renderAll();
+        activeCanvas.setActiveObject(image);
+      });
+    };
+    reader.readAsDataURL(file);
 
-    fabric.Image.fromURL(blobUrl, (image) => {
-      image.scaleToWidth(200);
-      activeCanvas.add(image);
-      activeCanvas.renderAll();
-      activeCanvas.setActiveObject(image);
-      // Note: The blob URL is temporary and will not work if the canvas is
-      // saved and reloaded in a different session. For this reason, we don't
-      // revoke it, but be aware of this limitation.
-    });
-
-    // Reset the file input to allow selecting the same file again
     e.target.value = "";
   };
 
-  const saveCanvas = () => {
+  const saveCanvas = async () => {
     if (!activeCanvas) return;
-    const canvasJson = activeCanvas.toJSON();
-    console.log(JSON.stringify(canvasJson, null, 2));
-    alert("Active canvas content saved to console!");
+
+    const backgroundImage = activeCanvas.backgroundImage as fabric.Image;
+    if (!backgroundImage || !backgroundImage.getSrc) {
+      alert("Background image not found!");
+      return;
+    }
+
+    const sharpObjects = activeCanvas
+      .getObjects()
+      .map((obj) => {
+        const common = {
+          left: obj.left,
+          top: obj.top,
+          width: obj.getScaledWidth(),
+          height: obj.getScaledHeight(),
+          angle: obj.angle,
+        };
+
+        if (obj.type === "i-text") {
+          const textObj = obj as fabric.IText;
+          return {
+            type: "text",
+            text: textObj.text,
+            fontSize: textObj.fontSize,
+            fill: textObj.fill,
+            fontFamily: textObj.fontFamily,
+            ...common,
+          };
+        } else if (obj.type === "image") {
+          const imgObj = obj as fabric.Image;
+          return {
+            type: "image",
+            src: imgObj.getSrc(), // This will be a data: URL
+            ...common,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    const dataForSharp = {
+      width: activeCanvas.width,
+      height: activeCanvas.height,
+      background: backgroundImage.getSrc().replace(window.location.origin, ""),
+      objects: sharpObjects,
+    };
+
+    try {
+      const response = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(dataForSharp),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.details || "Failed to generate image");
+      }
+
+      const result = await response.json();
+      alert(`Image saved successfully! URL: ${result.url}`);
+      window.open(result.url, "_blank");
+    } catch (error) {
+      console.error("Error saving canvas:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "An unknown error occurred.";
+      alert(`Error saving canvas: ${errorMessage}`);
+    }
   };
 
   const deleteSelected = () => {
@@ -187,6 +271,15 @@ export default function LetterEditor() {
     setFontColor(newColor);
     if (selectedObject && selectedObject.type === "i-text" && activeCanvas) {
       (selectedObject as fabric.IText).set("fill", newColor);
+      activeCanvas.renderAll();
+    }
+  };
+
+  const handleFontFamilyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newFontFamily = e.target.value;
+    setFontFamily(newFontFamily);
+    if (selectedObject && selectedObject.type === "i-text" && activeCanvas) {
+      (selectedObject as fabric.IText).set("fontFamily", newFontFamily);
       activeCanvas.renderAll();
     }
   };
@@ -285,6 +378,20 @@ export default function LetterEditor() {
                         onChange={handleColorChange}
                         className="w-10 h-10"
                       />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label>Font:</label>
+                      <select
+                        value={fontFamily}
+                        onChange={handleFontFamilyChange}
+                        className="px-2 py-1 border rounded-md"
+                      >
+                        {availableFonts.map((font) => (
+                          <option key={font.value} value={font.value}>
+                            {font.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </>
                 )}
