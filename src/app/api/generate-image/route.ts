@@ -3,12 +3,20 @@ import sharp from "sharp";
 import path from "path";
 import fs from "fs/promises";
 
-// Define the structure of the request body
 interface SharpObject {
-  type: "raster";
-  src: string; // Expecting data URL for the rasterized object
-  left?: number;
-  top?: number;
+  type: "text" | "image";
+  width?: number;
+  height?: number;
+  angle?: number;
+  centerX?: number;
+  centerY?: number;
+  // Text specific
+  text?: string;
+  fontSize?: number;
+  fill?: string;
+  fontFamily?: string;
+  // Image specific
+  src?: string; // Expecting data URL for images
 }
 
 interface RequestBody {
@@ -17,6 +25,27 @@ interface RequestBody {
   background: string;
   objects: SharpObject[];
 }
+
+const createTextSvg = (obj: SharpObject): Buffer => {
+  const { text, fontSize, fill, fontFamily, width, height } = obj;
+  const svg = `
+        <svg width="${Math.round(width || 100)}" height="${Math.round(
+    height || 100
+  )}">
+            <style>
+                .title { 
+                    fill: ${fill}; 
+                    font-size: ${fontSize}px; 
+                    font-family: ${fontFamily}; 
+                    text-anchor: middle;
+                    dominant-baseline: middle;
+                }
+            </style>
+            <text x="50%" y="50%" class="title">${text}</text>
+        </svg>
+    `;
+  return Buffer.from(svg);
+};
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,43 +61,63 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Ensure the output directory exists
     const outputDir = path.join(process.cwd(), "public", "generated");
     await fs.mkdir(outputDir, { recursive: true });
 
-    // Load the background image
     const backgroundPath = path.join(process.cwd(), "public", background);
     let image = sharp(backgroundPath).resize(width, height);
 
-    // Prepare composite layers from the already rasterized objects
-    const compositeLayers = objects.map((obj) => {
-      if (obj.type !== "raster" || !obj.src) {
-        return null;
-      }
+    const compositeLayers = await Promise.all(
+      objects.map(async (obj) => {
+        let layerBuffer: Buffer;
 
-      const base64Data = obj.src.split(";base64,").pop();
-      if (!base64Data) {
-        return null;
-      }
+        if (obj.type === "text") {
+          const textSvg = createTextSvg(obj);
+          layerBuffer = await sharp(textSvg, { density: 300 }).toBuffer();
+        } else if (obj.type === "image" && obj.src) {
+          const base64Data = obj.src.split(";base64,").pop();
+          if (!base64Data) return null;
+          layerBuffer = Buffer.from(base64Data, "base64");
+        } else {
+          return null;
+        }
 
-      const buffer = Buffer.from(base64Data, "base64");
+        let layer = sharp(layerBuffer);
 
-      return {
-        input: buffer,
-        left: Math.round(obj.left || 0),
-        top: Math.round(obj.top || 0),
-      };
-    });
+        if (obj.width && obj.height) {
+          layer = layer.resize(Math.round(obj.width), Math.round(obj.height));
+        }
 
-    const validLayers = compositeLayers.filter(Boolean) as {
-      input: Buffer;
-      left: number;
-      top: number;
-    }[];
+        if (obj.angle) {
+          // Ensure alpha channel exists before rotating to make background transparent
+          layer = layer.ensureAlpha().rotate(obj.angle, {
+            background: { r: 0, g: 0, b: 0, alpha: 0 },
+          });
+        }
 
+        const rotatedLayerBuffer = await layer.toBuffer();
+        const metadata = await sharp(rotatedLayerBuffer).metadata();
+
+        const finalLeft = Math.round(
+          (obj.centerX || 0) - (metadata.width || 0) / 2
+        );
+        const finalTop = Math.round(
+          (obj.centerY || 0) - (metadata.height || 0) / 2
+        );
+
+        return {
+          input: rotatedLayerBuffer,
+          left: finalLeft,
+          top: finalTop,
+        };
+      })
+    );
+
+    const validLayers = compositeLayers.filter(
+      Boolean
+    ) as sharp.OverlayOptions[];
     image = image.composite(validLayers);
 
-    // Save the final image
     const outputFileName = `letter-${Date.now()}.png`;
     const outputPath = path.join(outputDir, outputFileName);
     await image.toFile(outputPath);
