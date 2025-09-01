@@ -65,6 +65,9 @@ export default function LetterEditor() {
             height: originalHeight,
           });
           fabricInstances.current[index] = canvas;
+          if (index === selectedPageIndex) {
+            setActiveCanvas(canvas);
+          }
 
           // 2. Set background image, ensuring it scales to the canvas size
           fabric.Image.fromURL(img.src, (bgImg) => {
@@ -101,7 +104,6 @@ export default function LetterEditor() {
           canvas.on("selection:updated", handleSelection);
           canvas.on("selection:cleared", () => setSelectedObject(null));
           canvas.on("mouse:down", () => {
-            setActiveCanvas(canvas);
             setSelectedPageIndex(index);
           });
         };
