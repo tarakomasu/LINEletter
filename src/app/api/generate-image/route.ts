@@ -61,7 +61,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const outputDir = path.join(process.cwd(), "public", "generated");
+    const outputDir = "/tmp";
+    // Ensure the directory exists
     await fs.mkdir(outputDir, { recursive: true });
 
     const backgroundPath = path.join(process.cwd(), "public", background);
@@ -122,8 +123,14 @@ export async function POST(req: NextRequest) {
     const outputPath = path.join(outputDir, outputFileName);
     await image.toFile(outputPath);
 
-    const publicUrl = `/generated/${outputFileName}`;
-    return NextResponse.json({ url: publicUrl });
+    // Read the file back and convert to a data URL
+    const fileBuffer = await fs.readFile(outputPath);
+    const dataUrl = `data:image/png;base64,${fileBuffer.toString("base64")}`;
+
+    // Optionally, delete the file from /tmp after reading it
+    await fs.unlink(outputPath);
+
+    return NextResponse.json({ url: dataUrl });
   } catch (error) {
     console.error("Image generation failed:", error);
     const errorMessage =
