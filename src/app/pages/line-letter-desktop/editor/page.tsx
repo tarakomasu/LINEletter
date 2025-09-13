@@ -2,6 +2,31 @@
 
 import { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
+import { createClient } from "@supabase/supabase-js";
+
+// Initialize Supabase client
+const supabaseUrl = "https://vqxbspchwzhxghoswyrx.supabase.co";
+const supabaseKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxeGJzcGNod3poeGdob3N3eXJ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDIzNTM2NywiZXhwIjoyMDY5ODExMzY3fQ.P9JEaOibrGXvvTsJxf2IfgMJzw53MCA6PfX7UHjs6NM";
+const supabase = createClient(supabaseUrl, supabaseKey);
+const bucketName = "line-letter";
+
+// Helper function to convert data URL to Blob
+const dataURLtoBlob = (dataurl: string) => {
+  const arr = dataurl.split(",");
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  if (!mimeMatch) {
+    throw new Error("Invalid data URL");
+  }
+  const mime = mimeMatch[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+};
 
 interface Page {
   background: string;
@@ -20,7 +45,7 @@ const availableFonts = [
   { name: "MS Pゴシック", value: "'MS P Gothic', sans-serif" },
 ];
 
-export default function LetterEditor() {
+export default function EditorTest() {
   const [pages, setPages] = useState<Page[]>([
     { background: "/template-papers/sea.png" },
   ]); // Start with one page
@@ -33,6 +58,7 @@ export default function LetterEditor() {
   const [activeCanvas, setActiveCanvas] = useState<fabric.Canvas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [templatePapers, setTemplatePapers] = useState<string[]>([]);
+  const [isSavingDirectly, setIsSavingDirectly] = useState(false);
 
   // State for text properties
   const [fontSize, setFontSize] = useState<number>(40);
@@ -56,43 +82,39 @@ export default function LetterEditor() {
         const img = new Image();
         img.src = page.background;
         img.onload = () => {
-          const originalWidth = img.width;
-          const originalHeight = img.height;
+          // --- NEW SPECIFICATION ---
+          // 1. Define target resolution and calculate display dimensions
+          const targetWidth = 1400;
+          const targetHeight = 2048;
+          const aspectRatio = targetWidth / targetHeight;
 
-          // 1. Create canvas with full resolution backing store
+          const displayHeight = window.innerHeight * 0.9;
+          const displayWidth = displayHeight * aspectRatio;
+
+          // 2. Create canvas with display dimensions (not full resolution)
           const canvas = new fabric.Canvas(canvasEl, {
-            width: originalWidth,
-            height: originalHeight,
+            width: displayWidth,
+            height: displayHeight,
           });
           fabricInstances.current[index] = canvas;
           if (index === selectedPageIndex) {
             setActiveCanvas(canvas);
           }
 
-          // 2. Set background image, ensuring it scales to the canvas size
+          // 3. Set background image, scaling it to fit the new display-sized canvas
           fabric.Image.fromURL(img.src, (bgImg) => {
             if (bgImg.width && bgImg.height) {
               canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas), {
-                scaleX: canvas.width! / bgImg.width,
-                scaleY: canvas.height! / bgImg.height,
+                scaleX: displayWidth / bgImg.width,
+                scaleY: displayHeight / bgImg.height,
               });
             } else {
-              // fallback: set background without scaling if dimensions are missing
               canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas));
             }
           });
 
-          // 3. Calculate zoom and apply it to fit the screen
-          const screenHeight = window.innerHeight * 0.9;
-          const zoom = screenHeight / originalHeight;
-          canvas.setZoom(zoom);
-
-          // 4. Adjust the CSS size of the canvas wrapper to fit the screen
-          const wrapperEl = canvas.getElement().parentElement;
-          if (wrapperEl) {
-            wrapperEl.style.width = `${originalWidth * zoom}px`;
-            wrapperEl.style.height = `${screenHeight}px`;
-          }
+          // 4. No setZoom() is needed. The canvas is already at the desired display size.
+          // The canvas element's dimensions directly control the display size.
 
           const handleSelection = (e: fabric.IEvent) => {
             const selection = e.selected?.[0] ?? null;
@@ -110,7 +132,7 @@ export default function LetterEditor() {
       }
     });
 
-    // Cleanup logic for when pages are removed (optional but good practice)
+    // Cleanup logic
     return () => {
       fabricInstances.current.forEach((canvas, index) => {
         if (!pages[index]) {
@@ -165,7 +187,7 @@ export default function LetterEditor() {
     const text = new fabric.IText("Tap to edit", {
       left: activeCanvas.getWidth() / 2,
       top: activeCanvas.getHeight() / 2,
-      fontSize: 80, // Initial font size is larger for visibility on high-res canvas
+      fontSize: 40, // Adjusted for smaller display canvas
       fill: "#000",
       fontFamily: "'Times New Roman', serif",
       originX: "center",
@@ -185,7 +207,6 @@ export default function LetterEditor() {
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
       fabric.Image.fromURL(dataUrl, (image) => {
-        // Scale to be 1/4 of the canvas width
         image.scaleToWidth(activeCanvas.getWidth() / 4);
         image.set({
           left: activeCanvas.getWidth() / 2,
@@ -203,78 +224,64 @@ export default function LetterEditor() {
     e.target.value = "";
   };
 
-  const saveCanvas = async () => {
-    if (!activeCanvas) return;
+  const saveCanvasToSupabaseDirectly = async () => {
+    if (!activeCanvas || isSavingDirectly) return;
 
-    const backgroundImage = activeCanvas.backgroundImage as fabric.Image;
-    if (!backgroundImage || !backgroundImage.getSrc) {
-      alert("Background image not found!");
-      return;
-    }
-
-    const sharpObjects = activeCanvas
-      .getObjects()
-      .map((obj) => {
-        const center = obj.getCenterPoint();
-        const common = {
-          width: obj.getScaledWidth(),
-          height: obj.getScaledHeight(),
-          angle: obj.angle,
-          centerX: center.x,
-          centerY: center.y,
-        };
-
-        if (obj.type === "i-text") {
-          const textObj = obj as fabric.IText;
-          return {
-            type: "text",
-            text: textObj.text,
-            fontSize: textObj.fontSize,
-            fill: textObj.fill,
-            fontFamily: textObj.fontFamily,
-            ...common,
-          };
-        } else if (obj.type === "image") {
-          const imgObj = obj as fabric.Image;
-          return {
-            type: "image",
-            src: imgObj.getSrc(), // This will be a data: URL
-            ...common,
-          };
-        }
-        return null;
-      })
-      .filter(Boolean);
-
-    const dataForSharp = {
-      width: activeCanvas.width,
-      height: activeCanvas.height,
-      background: backgroundImage.getSrc().replace(window.location.origin, ""),
-      objects: sharpObjects,
-    };
-
+    setIsSavingDirectly(true);
     try {
-      const response = await fetch("/api/generate-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(dataForSharp),
+      // --- NEW SPECIFICATION ---
+      // 1. Define the target output width.
+      const targetWidth = 1400;
+
+      // 2. Get the current display width of the canvas.
+      const displayWidth = activeCanvas.getWidth();
+
+      // 3. Calculate the multiplier needed to scale from display size to target size.
+      const multiplier = targetWidth / displayWidth;
+
+      // 4. Generate data URL using the calculated multiplier.
+      const dataUrl = activeCanvas.toDataURL({
+        format: "png",
+        quality: 1,
+        multiplier: multiplier,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || "Failed to generate image");
+      // Convert to Blob
+      const blob = dataURLtoBlob(dataUrl);
+      const fileName = `letter-direct-${Date.now()}.png`;
+
+      // Upload to Supabase Storage
+      const { data, error: uploadError } = await supabase.storage
+        .from(bucketName)
+        .upload(fileName, blob, {
+          contentType: "image/png",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Supabase upload failed: ${uploadError.message}`);
       }
 
-      const result = await response.json();
-      alert(`Image saved successfully! URL: ${result.url}`);
-      window.open(result.url, "_blank");
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(fileName);
+
+      if (!publicUrlData) {
+        throw new Error("Failed to get public URL from Supabase.");
+      }
+
+      alert(
+        `Image saved directly to Supabase! URL: ${publicUrlData.publicUrl}`
+      );
+      window.open(publicUrlData.publicUrl, "_blank");
     } catch (error) {
-      console.error("Error saving canvas:", error);
+      console.error("Error saving canvas directly:", error);
       const errorMessage =
         error instanceof Error ? error.message : "An unknown error occurred.";
-      alert(`Error saving canvas: ${errorMessage}`);
+      alert(`Error saving canvas directly: ${errorMessage}`);
+    } finally {
+      setIsSavingDirectly(false);
     }
   };
 
@@ -372,10 +379,11 @@ export default function LetterEditor() {
             className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
           />
           <button
-            className="px-4 py-2 bg-green-500 text-white rounded-md"
-            onClick={saveCanvas}
+            className="px-4 py-2 bg-purple-500 text-white rounded-md disabled:bg-gray-400"
+            onClick={saveCanvasToSupabaseDirectly}
+            disabled={isSavingDirectly}
           >
-            Save
+            {isSavingDirectly ? "保存中..." : "Save Image"}
           </button>
           {selectedObject && (
             <div className="mt-4 pt-4 border-t">

@@ -5,9 +5,9 @@ import { JWT } from "next-auth/jwt";
 declare module "next-auth" {
   interface Session {
     user: {
-      name?: string | null
-      image?: string | null
-    }
+      name?: string | null;
+      image?: string | null;
+    };
   }
 }
 
@@ -19,4 +19,10 @@ export const authOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
-}
+  callbacks: {
+    async redirect({ baseUrl }: { baseUrl: string }) {
+      // ログイン後に常に/pages/app-listにリダイレクトする
+      return `${baseUrl}/pages/app-list`;
+    },
+  },
+};
