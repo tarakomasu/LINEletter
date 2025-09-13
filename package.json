@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@line/liff": "^2.27.2",
     "@supabase/supabase-js": "^2.56.1",
     "@types/fabric": "^5.3.10",
     "fabric": "^5.5.2",

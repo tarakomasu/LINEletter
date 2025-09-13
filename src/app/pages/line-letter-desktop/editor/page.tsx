@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { createClient } from "@supabase/supabase-js";
+import Script from "next/script";
+import type { Liff } from "@line/liff";
 
 // Initialize Supabase client
 const supabaseUrl = "https://vqxbspchwzhxghoswyrx.supabase.co";
@@ -45,10 +47,29 @@ const availableFonts = [
   { name: "MS Pゴシック", value: "'MS P Gothic', sans-serif" },
 ];
 
+// --- LIFF --- //
+const LIFF_ID = "2007941017-kPwmN542";
+
+/**
+ * Creates the message object to be sent via LIFF.
+ * This function can be modified later to return a Flex Message.
+ * @param imageUrl The URL of the generated letter image.
+ * @returns An array of message objects for LIFF.
+ */
+const createLiffMessage = (imageUrl: string) => {
+  return [
+    {
+      type: "text" as const,
+      text: `手紙が届きました！\nこちらからご覧ください：\n${imageUrl}`,
+    },
+  ];
+};
+// --- END LIFF ---
+
 export default function EditorTest() {
   const [pages, setPages] = useState<Page[]>([
     { background: "/template-papers/sea.png" },
-  ]); // Start with one page
+  ]);
   const [selectedPageIndex, setSelectedPageIndex] = useState<number>(0);
   const fabricInstances = useRef<(fabric.Canvas | null)[]>([]);
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
@@ -59,6 +80,25 @@ export default function EditorTest() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [templatePapers, setTemplatePapers] = useState<string[]>([]);
   const [isSavingDirectly, setIsSavingDirectly] = useState(false);
+  const [liff, setLiff] = useState<Liff | null>(null);
+
+  // --- LIFF ---
+  const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initLiff = async () => {
+      try {
+        const liffModule = (await import("@line/liff")).default;
+        await liffModule.init({ liffId: LIFF_ID });
+        setLiff(liffModule);
+        console.log("LIFF initialized successfully");
+      } catch (error) {
+        console.error("LIFF initialization failed", error);
+      }
+    };
+    initLiff();
+  }, []);
+  // --- END LIFF ---
 
   // State for text properties
   const [fontSize, setFontSize] = useState<number>(40);
@@ -68,7 +108,6 @@ export default function EditorTest() {
   );
 
   useEffect(() => {
-    // In a real app, you might fetch this from an API.
     setTemplatePapers([
       "/template-papers/sea.png",
       "/template-papers/本文を追加.png",
@@ -82,16 +121,12 @@ export default function EditorTest() {
         const img = new Image();
         img.src = page.background;
         img.onload = () => {
-          // --- NEW SPECIFICATION ---
-          // 1. Define target resolution and calculate display dimensions
           const targetWidth = 1400;
           const targetHeight = 2048;
           const aspectRatio = targetWidth / targetHeight;
-
           const displayHeight = window.innerHeight * 0.9;
           const displayWidth = displayHeight * aspectRatio;
 
-          // 2. Create canvas with display dimensions (not full resolution)
           const canvas = new fabric.Canvas(canvasEl, {
             width: displayWidth,
             height: displayHeight,
@@ -101,7 +136,6 @@ export default function EditorTest() {
             setActiveCanvas(canvas);
           }
 
-          // 3. Set background image, scaling it to fit the new display-sized canvas
           fabric.Image.fromURL(img.src, (bgImg) => {
             if (bgImg.width && bgImg.height) {
               canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas), {
@@ -112,9 +146,6 @@ export default function EditorTest() {
               canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas));
             }
           });
-
-          // 4. No setZoom() is needed. The canvas is already at the desired display size.
-          // The canvas element's dimensions directly control the display size.
 
           const handleSelection = (e: fabric.IEvent) => {
             const selection = e.selected?.[0] ?? null;
@@ -132,7 +163,6 @@ export default function EditorTest() {
       }
     });
 
-    // Cleanup logic
     return () => {
       fabricInstances.current.forEach((canvas, index) => {
         if (!pages[index]) {
@@ -150,7 +180,6 @@ export default function EditorTest() {
     }
   }, [selectedPageIndex, pages, activeCanvas]);
 
-  // Update text controls when selection changes
   useEffect(() => {
     if (selectedObject && selectedObject.type === "i-text") {
       const textObject = selectedObject as fabric.IText;
@@ -160,7 +189,6 @@ export default function EditorTest() {
     }
   }, [selectedObject]);
 
-  // Full cleanup on unmount
   useEffect(() => {
     return () => {
       fabricInstances.current.forEach((canvas) => canvas?.dispose());
@@ -187,7 +215,7 @@ export default function EditorTest() {
     const text = new fabric.IText("Tap to edit", {
       left: activeCanvas.getWidth() / 2,
       top: activeCanvas.getHeight() / 2,
-      fontSize: 40, // Adjusted for smaller display canvas
+      fontSize: 40,
       fill: "#000",
       fontFamily: "'Times New Roman', serif",
       originX: "center",
@@ -228,29 +256,20 @@ export default function EditorTest() {
     if (!activeCanvas || isSavingDirectly) return;
 
     setIsSavingDirectly(true);
+    setSavedImageUrl(null); // Reset on new save attempt
     try {
-      // --- NEW SPECIFICATION ---
-      // 1. Define the target output width.
       const targetWidth = 1400;
-
-      // 2. Get the current display width of the canvas.
       const displayWidth = activeCanvas.getWidth();
-
-      // 3. Calculate the multiplier needed to scale from display size to target size.
       const multiplier = targetWidth / displayWidth;
-
-      // 4. Generate data URL using the calculated multiplier.
       const dataUrl = activeCanvas.toDataURL({
         format: "png",
         quality: 1,
         multiplier: multiplier,
       });
 
-      // Convert to Blob
       const blob = dataURLtoBlob(dataUrl);
       const fileName = `letter-direct-${Date.now()}.png`;
 
-      // Upload to Supabase Storage
       const { data, error: uploadError } = await supabase.storage
         .from(bucketName)
         .upload(fileName, blob, {
@@ -262,7 +281,6 @@ export default function EditorTest() {
         throw new Error(`Supabase upload failed: ${uploadError.message}`);
       }
 
-      // Get public URL
       const { data: publicUrlData } = supabase.storage
         .from(bucketName)
         .getPublicUrl(fileName);
@@ -271,10 +289,8 @@ export default function EditorTest() {
         throw new Error("Failed to get public URL from Supabase.");
       }
 
-      alert(
-        `Image saved directly to Supabase! URL: ${publicUrlData.publicUrl}`
-      );
-      window.open(publicUrlData.publicUrl, "_blank");
+      alert("Image saved! You can now share it on LINE.");
+      setSavedImageUrl(publicUrlData.publicUrl); // Set state to show share button
     } catch (error) {
       console.error("Error saving canvas directly:", error);
       const errorMessage =
@@ -284,6 +300,35 @@ export default function EditorTest() {
       setIsSavingDirectly(false);
     }
   };
+
+  // --- LIFF ---
+  const handleShare = async () => {
+    if (!savedImageUrl || !liff) {
+      alert("Image not saved or LIFF not initialized.");
+      return;
+    }
+
+    if (!liff.isLoggedIn()) {
+      // Although shareTargetPicker can work without this, it's good practice
+      // to ensure the user is logged in for a better experience.
+      liff.login();
+      return; // login() redirects, so we stop here.
+    }
+
+    try {
+      const messages = createLiffMessage(savedImageUrl);
+      const result = await liff.shareTargetPicker(messages as any);
+      if (result) {
+        alert("Letter shared successfully!");
+      } else {
+        console.log("Share was cancelled by the user.");
+      }
+    } catch (error) {
+      console.error("Error sharing message:", error);
+      alert("Failed to share letter. Please try again.");
+    }
+  };
+  // --- END LIFF ---
 
   const deleteSelected = () => {
     if (selectedObject && activeCanvas) {
@@ -333,6 +378,7 @@ export default function EditorTest() {
 
   return (
     <div className="min-h-screen bg-gray-200 flex">
+      {/* No need for <Script> tag if using dynamic import */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
           <div className="bg-white p-8 rounded-lg shadow-xl">
@@ -385,6 +431,18 @@ export default function EditorTest() {
           >
             {isSavingDirectly ? "保存中..." : "Save Image"}
           </button>
+
+          {/* --- LIFF Share Button --- */}
+          {savedImageUrl && liff && (
+            <button
+              className="px-4 py-2 bg-green-500 text-white rounded-md mt-2"
+              onClick={handleShare}
+            >
+              LINEで送信する
+            </button>
+          )}
+          {/* --- END LIFF --- */}
+
           {selectedObject && (
             <div className="mt-4 pt-4 border-t">
               <h4 className="font-bold mb-2">Selected Object</h4>
