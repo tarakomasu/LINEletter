@@ -88,7 +88,10 @@ export default function EditorTest() {
     const initLiff = async () => {
       try {
         const liffModule = (await import("@line/liff")).default;
-        await liffModule.init({ liffId: LIFF_ID });
+        await liffModule.init({
+          liffId: LIFF_ID,
+          withLoginOnExternalBrowser: true,
+        });
         setLiff(liffModule);
         console.log("LIFF initialized successfully");
       } catch (error) {
