@@ -4,8 +4,8 @@ import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { createClient } from "@supabase/supabase-js";
-import Script from "next/script";
 import type { Liff } from "@line/liff";
+import { AddPageIcon } from "../components/icons";
 
 const supabaseUrl = "https://vqxbspchwzhxghoswyrx.supabase.co";
 const supabaseKey =
@@ -50,12 +50,6 @@ const availableFonts = [
 // --- LIFF --- //
 const LIFF_ID = "2007941017-kPwmN542";
 
-/**
- * Creates the message object to be sent via LIFF.
- * This function can be modified later to return a Flex Message.
- * @param imageUrl The URL of the generated letter image.
- * @returns An array of message objects for LIFF.
- */
 const createLiffMessage = (imageUrl: string) => {
   return [
     {
@@ -388,6 +382,9 @@ export default function EditorTest() {
     }
   };
 
+  const buttonStyle = "flex justify-center items-center gap-2 px-4 py-2 bg-white border-2 border-green-500 text-green-500 rounded-md hover:bg-green-500 hover:text-white transition-colors w-full";
+  const disabledButtonStyle = "flex justify-center items-center gap-2 px-4 py-2 bg-gray-200 border-2 border-gray-400 text-gray-400 rounded-md w-full";
+
   return (
     <div className="min-h-screen bg-gray-200 flex">
       {/* No need for <Script> tag if using dynamic import */}
@@ -419,18 +416,14 @@ export default function EditorTest() {
         <h3 className="text-xl font-bold mb-4">Controls</h3>
         <div className="flex flex-col gap-4">
           <button
-            className="flex justify-center items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors w-full"
+            className={buttonStyle}
             onClick={addPage}
           >
-            <img
-              src="/control-panel-icons/multiple-pages-add-svgrepo-com.svg"
-              alt="Add Page"
-              className="w-6 h-6"
-            />
+            <AddPageIcon className="w-6 h-6" />
             <span>Add Page</span>
           </button>
           <button
-            className="px-4 py-2 bg-green-500 text-white rounded-md w-full"
+            className={buttonStyle}
             onClick={addText}
           >
             Add Text
@@ -444,12 +437,12 @@ export default function EditorTest() {
           />
           <label
             htmlFor="image-upload"
-            className="px-4 py-2 bg-green-500 text-white rounded-md cursor-pointer text-center w-full"
+            className={`${buttonStyle} cursor-pointer`}
           >
             Add Image
           </label>
           <button
-            className="px-4 py-2 bg-green-500 text-white rounded-md disabled:bg-gray-400 w-full"
+            className={isSavingDirectly ? disabledButtonStyle : buttonStyle}
             onClick={saveCanvasToSupabaseDirectly}
             disabled={isSavingDirectly}
           >
@@ -459,7 +452,7 @@ export default function EditorTest() {
           {/* --- LIFF Share Button --- */}
           {savedImageUrl && liff && (
             <button
-              className="px-4 py-2 bg-green-500 text-white rounded-md w-full"
+              className={buttonStyle}
               onClick={handleShare}
             >
               Share
