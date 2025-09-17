@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { createClient } from "@supabase/supabase-js";
@@ -66,6 +67,7 @@ const createLiffMessage = (imageUrl: string) => {
 // --- END LIFF ---
 
 export default function EditorTest() {
+  const { data: session, status } = useSession();
   const [pages, setPages] = useState<Page[]>([
     { background: "/template-papers/sea.png" },
   ]);
@@ -80,6 +82,14 @@ export default function EditorTest() {
   const [templatePapers, setTemplatePapers] = useState<string[]>([]);
   const [isSavingDirectly, setIsSavingDirectly] = useState(false);
   const [liff, setLiff] = useState<Liff | null>(null);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      console.log("Authenticated user:", session.user);
+    } else if (status === "unauthenticated") {
+      console.log("User is not authenticated.");
+    }
+  }, [status, session]);
 
   // --- LIFF ---
   const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
@@ -512,10 +522,9 @@ export default function EditorTest() {
         {pages.map((page, index) => (
           <div
             key={index}
-            className={`mb-4 shadow-lg ${
-              selectedPageIndex === index
-                ? "border-4 border-blue-500 rounded-lg"
-                : "border-4 border-transparent"
+            className={`mb-4 shadow-lg ${selectedPageIndex === index
+              ? "border-4 border-blue-500 rounded-lg"
+              : "border-4 border-transparent"
             }`}
             onClick={() => setSelectedPageIndex(index)}
           >
