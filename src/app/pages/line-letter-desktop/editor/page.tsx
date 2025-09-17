@@ -417,20 +417,20 @@ export default function EditorTest() {
       )}
       <div className="w-64 bg-white shadow-md p-4 sticky top-0 h-screen overflow-y-auto">
         <h3 className="text-xl font-bold mb-4">Controls</h3>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex flex-col gap-4">
           <button
-            className="flex justify-center items-center p-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors"
+            className="flex justify-center items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors w-full"
             onClick={addPage}
-            title="Add Page"
           >
             <img
               src="/control-panel-icons/multiple-pages-add-svgrepo-com.svg"
               alt="Add Page"
-              className="w-8 h-8"
+              className="w-6 h-6"
             />
+            <span>Add Page</span>
           </button>
           <button
-            className="px-4 py-2 bg-green-500 text-white rounded-md"
+            className="px-4 py-2 bg-green-500 text-white rounded-md w-full"
             onClick={addText}
           >
             Add Text
@@ -444,12 +444,12 @@ export default function EditorTest() {
           />
           <label
             htmlFor="image-upload"
-            className="px-4 py-2 bg-green-500 text-white rounded-md cursor-pointer text-center"
+            className="px-4 py-2 bg-green-500 text-white rounded-md cursor-pointer text-center w-full"
           >
             Add Image
           </label>
           <button
-            className="px-4 py-2 bg-green-500 text-white rounded-md disabled:bg-gray-400"
+            className="px-4 py-2 bg-green-500 text-white rounded-md disabled:bg-gray-400 w-full"
             onClick={saveCanvasToSupabaseDirectly}
             disabled={isSavingDirectly}
           >
@@ -459,7 +459,7 @@ export default function EditorTest() {
           {/* --- LIFF Share Button --- */}
           {savedImageUrl && liff && (
             <button
-              className="px-4 py-2 bg-green-500 text-white rounded-md"
+              className="px-4 py-2 bg-green-500 text-white rounded-md w-full"
               onClick={handleShare}
             >
               Share
