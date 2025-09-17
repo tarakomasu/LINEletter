@@ -419,13 +419,18 @@ export default function EditorTest() {
         <h3 className="text-xl font-bold mb-4">Controls</h3>
         <div className="flex flex-col gap-4">
           <button
-            className="px-4 py-2 bg-indigo-500 text-white rounded-md"
+            className="flex justify-center items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors w-full"
             onClick={addPage}
           >
-            Add Page
+            <img
+              src="/control-panel-icons/multiple-pages-add-svgrepo-com.svg"
+              alt="Add Page"
+              className="w-6 h-6"
+            />
+            <span>Add Page</span>
           </button>
           <button
-            className="px-4 py-2 bg-blue-500 text-white rounded-md"
+            className="px-4 py-2 bg-green-500 text-white rounded-md w-full"
             onClick={addText}
           >
             Add Text
@@ -434,89 +439,96 @@ export default function EditorTest() {
             type="file"
             accept="image/*"
             onChange={addImage}
-            className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+            className="hidden"
+            id="image-upload"
           />
+          <label
+            htmlFor="image-upload"
+            className="px-4 py-2 bg-green-500 text-white rounded-md cursor-pointer text-center w-full"
+          >
+            Add Image
+          </label>
           <button
-            className="px-4 py-2 bg-purple-500 text-white rounded-md disabled:bg-gray-400"
+            className="px-4 py-2 bg-green-500 text-white rounded-md disabled:bg-gray-400 w-full"
             onClick={saveCanvasToSupabaseDirectly}
             disabled={isSavingDirectly}
           >
-            {isSavingDirectly ? "保存中..." : "Save Image"}
+            {isSavingDirectly ? "保存中..." : "Save"}
           </button>
 
           {/* --- LIFF Share Button --- */}
           {savedImageUrl && liff && (
             <button
-              className="px-4 py-2 bg-green-500 text-white rounded-md mt-2"
+              className="px-4 py-2 bg-green-500 text-white rounded-md w-full"
               onClick={handleShare}
             >
-              LINEで送信する
+              Share
             </button>
           )}
           {/* --- END LIFF --- */}
-
-          {selectedObject && (
-            <div className="mt-4 pt-4 border-t">
-              <h4 className="font-bold mb-2">Selected Object</h4>
-              <div className="flex flex-col gap-2">
-                <button
-                  className="px-4 py-2 bg-red-500 text-white rounded-md"
-                  onClick={deleteSelected}
-                >
-                  Delete
-                </button>
-                <button
-                  className="px-4 py-2 bg-gray-500 text-white rounded-md"
-                  onClick={bringForward}
-                >
-                  Bring Forward
-                </button>
-                <button
-                  className="px-4 py-2 bg-gray-500 text-white rounded-md"
-                  onClick={sendBackwards}
-                >
-                  Send Backwards
-                </button>
-                {selectedObject.type === "i-text" && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <label>Size:</label>
-                      <input
-                        type="number"
-                        value={fontSize}
-                        onChange={handleFontSizeChange}
-                        className="px-2 py-1 border rounded-md w-20"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label>Color:</label>
-                      <input
-                        type="color"
-                        value={fontColor}
-                        onChange={handleColorChange}
-                        className="w-10 h-10"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label>Font:</label>
-                      <select
-                        value={fontFamily}
-                        onChange={handleFontFamilyChange}
-                        className="px-2 py-1 border rounded-md"
-                      >
-                        {availableFonts.map((font) => (
-                          <option key={font.value} value={font.value}>
-                            {font.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
         </div>
+
+        {selectedObject && (
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="font-bold mb-2">Selected Object</h4>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                className="px-4 py-2 bg-red-500 text-white rounded-md"
+                onClick={deleteSelected}
+              >
+                Delete
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-500 text-white rounded-md"
+                onClick={bringForward}
+              >
+                Forward
+              </button>
+              <button
+                className="px-4 py-2 bg-gray-500 text-white rounded-md"
+                onClick={sendBackwards}
+              >
+                Backwards
+              </button>
+            </div>
+            {selectedObject.type === "i-text" && (
+              <div className="mt-4 flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                  <label>Size:</label>
+                  <input
+                    type="number"
+                    value={fontSize}
+                    onChange={handleFontSizeChange}
+                    className="px-2 py-1 border rounded-md w-full"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label>Color:</label>
+                  <input
+                    type="color"
+                    value={fontColor}
+                    onChange={handleColorChange}
+                    className="w-10 h-10"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label>Font:</label>
+                  <select
+                    value={fontFamily}
+                    onChange={handleFontFamilyChange}
+                    className="px-2 py-1 border rounded-md w-full"
+                  >
+                    {availableFonts.map((font) => (
+                      <option key={font.value} value={font.value}>
+                        {font.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <div className="flex-grow flex flex-col items-center p-8 overflow-y-auto h-screen bg-gray-200">
         {pages.map((page, index) => (
