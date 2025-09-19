@@ -65,3 +65,33 @@ export const TextIcon = ({ className }: { className?: string }) => (
     <path d="M554.666667 768l-85.333333 0c-25.6 0-42.666667-17.066667-42.666667-42.666667s17.066667-42.666667 42.666667-42.666667l85.333333 0c25.6 0 42.666667 17.066667 42.666667 42.666667S580.266667 768 554.666667 768z" />
   </svg>
 );
+
+export const HelpIcon = ({ className }: { className?: string }) => (
+  <svg 
+    className={className} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path 
+      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+      stroke="currentColor" 
+      strokeWidth="1.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    />
+    <path 
+      d="M9.08984 9.00002C9.32495 8.01883 10.0802 7.24949 11.0362 7.05135C12.213 6.80433 13.4094 7.28825 14.0542 8.28433C14.5346 9.0417 14.4211 10.0244 13.7944 10.7811C13.1677 11.5378 12.1111 12 12 12V12"
+      stroke="currentColor" 
+      strokeWidth="1.5" 
+      strokeLinecap="round"
+    />
+    <path 
+      d="M12 16.01L12.01 15.9989"
+      stroke="currentColor" 
+      strokeWidth="1.5" 
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
