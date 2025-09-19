@@ -77,13 +77,6 @@ const createLiffMessage = (imageUrl: string) => {
 };
 // --- END LIFF ---
 
-const fabricControlStyles = {
-  borderColor: "#22c55e",
-  cornerColor: "#22c55e",
-  cornerStrokeColor: "#22c55e",
-  transparentCorners: false,
-};
-
 export default function EditorTest() {
   const { data: session, status } = useSession();
   const [pages, setPages] = useState<Page[]>([
@@ -252,6 +245,36 @@ export default function EditorTest() {
       return newPages;
     });
     setIsModalOpen(false);
+  };
+
+  const deletePage = () => {
+    if (pages.length <= 1) {
+      alert("最後のページは削除できません。");
+      return;
+    }
+
+    if (window.confirm(`ページ ${selectedPageIndex + 1} を削除しますか？この操作は元に戻せません。`)) {
+      const canvasToDispose = fabricInstances.current[selectedPageIndex];
+      if (canvasToDispose) {
+        canvasToDispose.dispose();
+      }
+
+      const newPages = pages.filter((_, index) => index !== selectedPageIndex);
+      const newFabricInstances = fabricInstances.current.filter(
+        (_, index) => index !== selectedPageIndex
+      );
+      const newCanvasRefs = canvasRefs.current.filter(
+        (_, index) => index !== selectedPageIndex
+      );
+
+      fabricInstances.current = newFabricInstances;
+      canvasRefs.current = newCanvasRefs;
+      setPages(newPages);
+
+      if (selectedPageIndex >= newPages.length) {
+        setSelectedPageIndex(newPages.length - 1);
+      }
+    }
   };
 
   const addText = () => {
@@ -507,6 +530,20 @@ export default function EditorTest() {
           )}
         </div>
 
+        {pages.length > 1 && (
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="font-bold mb-2">ページ {selectedPageIndex + 1}</h4>
+            <div className="flex flex-col gap-2">
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-bold"
+                onClick={deletePage}
+              >
+                このページを削除
+              </button>
+            </div>
+          </div>
+        )}
+
         {selectedObject && (
           <div className="mt-4 pt-4 border-t">
             <h4 className="font-bold mb-2">選択中のオブジェクト</h4>
@@ -547,7 +584,7 @@ export default function EditorTest() {
                     type="color"
                     value={fontColor}
                     onChange={handleColorChange}
-                    className="w-10 h-10 p-1 "
+                    className="w-10 h-10"
                   />
                   <select
                     value={fontColor}
@@ -587,10 +624,9 @@ export default function EditorTest() {
         {pages.map((page, index) => (
           <div
             key={index}
-            className={`mb-4 shadow-lg ${
-              selectedPageIndex === index
-                ? "border-4 border-blue-500 rounded-lg"
-                : "border-4 border-transparent"
+            className={`mb-4 shadow-lg ${selectedPageIndex === index
+              ? "border-4 border-blue-500 rounded-lg"
+              : "border-4 border-transparent"
             }`}
             onClick={() => setSelectedPageIndex(index)}
           >
