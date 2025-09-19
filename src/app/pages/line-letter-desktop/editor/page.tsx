@@ -119,6 +119,11 @@ export default function EditorTest() {
   const [fontFamily, setFontFamily] = useState<string>(
     "'Times New Roman', serif"
   );
+  const [lastUsedTextStyle, setLastUsedTextStyle] = useState({
+    fontSize: 40,
+    fill: "#000000",
+    fontFamily: "'Times New Roman', serif",
+  });
 
   useEffect(() => {
     setTemplatePapers([
@@ -199,9 +204,14 @@ export default function EditorTest() {
   useEffect(() => {
     if (selectedObject && selectedObject.type === "i-text") {
       const textObject = selectedObject as fabric.IText;
-      setFontSize(textObject.fontSize || 40);
-      setFontColor((textObject.fill as string) || "#000000");
-      setFontFamily(textObject.fontFamily || "'Times New Roman', serif");
+      const style = {
+        fontSize: textObject.fontSize || 40,
+        fill: (textObject.fill as string) || "#000000",
+        fontFamily: textObject.fontFamily || "'Times New Roman', serif",
+      };
+      setFontSize(style.fontSize);
+      setFontColor(style.fill);
+      setFontFamily(style.fontFamily);
     }
   }, [selectedObject]);
 
@@ -231,9 +241,7 @@ export default function EditorTest() {
     const text = new fabric.IText("Tap to edit", {
       left: activeCanvas.getWidth() / 2,
       top: activeCanvas.getHeight() / 2,
-      fontSize: 40,
-      fill: "#000",
-      fontFamily: "'Times New Roman', serif",
+      ...lastUsedTextStyle,
       originX: "center",
       originY: "center",
     });
@@ -369,8 +377,10 @@ export default function EditorTest() {
     const newSize = parseInt(e.target.value, 10);
     setFontSize(newSize);
     if (selectedObject && selectedObject.type === "i-text" && activeCanvas) {
-      (selectedObject as fabric.IText).set("fontSize", newSize);
+      const textObject = selectedObject as fabric.IText;
+      textObject.set("fontSize", newSize);
       activeCanvas.renderAll();
+      setLastUsedTextStyle((prev) => ({ ...prev, fontSize: newSize }));
     }
   };
 
@@ -378,8 +388,10 @@ export default function EditorTest() {
     const newColor = e.target.value;
     setFontColor(newColor);
     if (selectedObject && selectedObject.type === "i-text" && activeCanvas) {
-      (selectedObject as fabric.IText).set("fill", newColor);
+      const textObject = selectedObject as fabric.IText;
+      textObject.set("fill", newColor);
       activeCanvas.renderAll();
+      setLastUsedTextStyle((prev) => ({ ...prev, fill: newColor }));
     }
   };
 
@@ -387,15 +399,17 @@ export default function EditorTest() {
     const newFontFamily = e.target.value;
     setFontFamily(newFontFamily);
     if (selectedObject && selectedObject.type === "i-text" && activeCanvas) {
-      (selectedObject as fabric.IText).set("fontFamily", newFontFamily);
+      const textObject = selectedObject as fabric.IText;
+      textObject.set("fontFamily", newFontFamily);
       activeCanvas.renderAll();
+      setLastUsedTextStyle((prev) => ({ ...prev, fontFamily: newFontFamily }));
     }
   };
 
   const buttonStyle =
-    "flex-grow justify-center items-center gap-2 px-4 py-2 bg-white border-2 border-green-500 text-green-500 rounded-md hover:bg-green-500 hover:text-white transition-colors flex";
+    "flex-grow justify-center items-center gap-2 px-4 py-2 bg-white border-2 border-green-500 text-green-500 rounded-md hover:bg-green-500 hover:text-white transition-colors flex font-bold";
   const disabledButtonStyle =
-    "flex-grow justify-center items-center gap-2 px-4 py-2 bg-gray-200 border-2 border-gray-400 text-gray-400 rounded-md flex";
+    "flex-grow justify-center items-center gap-2 px-4 py-2 bg-gray-200 border-2 border-gray-400 text-gray-400 rounded-md flex font-bold";
 
   return (
     <div className="min-h-screen bg-gray-200 flex">
@@ -539,10 +553,9 @@ export default function EditorTest() {
         {pages.map((page, index) => (
           <div
             key={index}
-            className={`mb-4 shadow-lg ${
-              selectedPageIndex === index
-                ? "border-4 border-blue-500 rounded-lg"
-                : "border-4 border-transparent"
+            className={`mb-4 shadow-lg ${selectedPageIndex === index
+              ? "border-4 border-blue-500 rounded-lg"
+              : "border-4 border-transparent"
             }`}
             onClick={() => setSelectedPageIndex(index)}
           >
