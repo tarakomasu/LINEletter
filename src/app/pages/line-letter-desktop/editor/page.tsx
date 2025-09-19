@@ -586,10 +586,9 @@ export default function EditorTest() {
         {pages.map((page, index) => (
           <div
             key={index}
-            className={`mb-4 shadow-lg ${
-              selectedPageIndex === index
-                ? "border-4 border-blue-500 rounded-lg"
-                : "border-4 border-transparent"
+            className={`mb-4 shadow-lg ${selectedPageIndex === index
+              ? "border-4 border-blue-500 rounded-lg"
+              : "border-4 border-transparent"
             }`}
             onClick={() => setSelectedPageIndex(index)}
           >
