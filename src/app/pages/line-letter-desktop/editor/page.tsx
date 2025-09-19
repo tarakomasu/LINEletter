@@ -259,7 +259,6 @@ export default function EditorTest() {
       left: activeCanvas.getWidth() / 2,
       top: activeCanvas.getHeight() / 2,
       ...lastUsedTextStyle,
-      ...fabricControlStyles,
       originX: "center",
       originY: "center",
     });
@@ -281,7 +280,6 @@ export default function EditorTest() {
         image.set({
           left: activeCanvas.getWidth() / 2,
           top: activeCanvas.getHeight() / 2,
-          ...fabricControlStyles,
           originX: "center",
           originY: "center",
         });
