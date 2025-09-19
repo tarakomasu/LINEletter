@@ -38,6 +38,7 @@ const dataURLtoBlob = (dataurl: string) => {
 };
 
 interface Page {
+  id: string;
   background: string;
 }
 
@@ -80,7 +81,7 @@ const createLiffMessage = (imageUrl: string) => {
 export default function EditorTest() {
   const { data: session, status } = useSession();
   const [pages, setPages] = useState<Page[]>([
-    { background: "/template-papers/sea.png" },
+    { id: `page-${Date.now()}`, background: "/template-papers/sea.png" },
   ]);
   const [selectedPageIndex, setSelectedPageIndex] = useState<number>(0);
   const fabricInstances = useRef<(fabric.Canvas | null)[]>([]);
@@ -238,7 +239,10 @@ export default function EditorTest() {
   };
 
   const handleSelectTemplate = (template: string) => {
-    const newPage = { background: template };
+    const newPage = { 
+      id: `page-${Date.now()}`,
+      background: template 
+    };
     setPages((prevPages) => {
       const newPages = [...prevPages, newPage];
       setSelectedPageIndex(newPages.length - 1);
@@ -623,7 +627,7 @@ export default function EditorTest() {
       <div className="flex-grow flex flex-col items-center p-8 overflow-y-auto h-screen bg-gray-200">
         {pages.map((page, index) => (
           <div
-            key={index}
+            key={page.id}
             className={`mb-4 shadow-lg ${selectedPageIndex === index
               ? "border-4 border-blue-500 rounded-lg"
               : "border-4 border-transparent"
