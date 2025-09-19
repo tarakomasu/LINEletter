@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { createClient } from "@supabase/supabase-js";
 import type { Liff } from "@line/liff";
-import { AddPageIcon } from "../components/icons";
+import { AddPageIcon, AddImageIcon, TextIcon } from "../components/icons";
 
 const supabaseUrl = "https://vqxbspchwzhxghoswyrx.supabase.co";
 const supabaseKey =
@@ -413,20 +413,21 @@ export default function EditorTest() {
         </div>
       )}
       <div className="w-64 bg-white shadow-md p-4 sticky top-0 h-screen overflow-y-auto">
-        <h3 className="text-xl font-bold mb-4">Controls</h3>
+        <h3 className="text-xl font-bold mb-4">コントロール</h3>
         <div className="flex flex-col gap-4">
           <button
             className={buttonStyle}
             onClick={addPage}
           >
             <AddPageIcon className="w-6 h-6" />
-            <span>Add Page</span>
+            <span>ページを追加</span>
           </button>
           <button
             className={buttonStyle}
             onClick={addText}
           >
-            Add Text
+            <TextIcon className="w-6 h-6" />
+            <span>テキストを追加</span>
           </button>
           <input
             type="file"
@@ -439,14 +440,15 @@ export default function EditorTest() {
             htmlFor="image-upload"
             className={`${buttonStyle} cursor-pointer`}
           >
-            Add Image
+            <AddImageIcon className="w-6 h-6" />
+            <span>画像を追加</span>
           </label>
           <button
             className={isSavingDirectly ? disabledButtonStyle : buttonStyle}
             onClick={saveCanvasToSupabaseDirectly}
             disabled={isSavingDirectly}
           >
-            {isSavingDirectly ? "保存中..." : "Save"}
+            {isSavingDirectly ? "保存中..." : "保存"}
           </button>
 
           {/* --- LIFF Share Button --- */}
@@ -455,7 +457,7 @@ export default function EditorTest() {
               className={buttonStyle}
               onClick={handleShare}
             >
-              Share
+              LINEで送信
             </button>
           )}
           {/* --- END LIFF --- */}
@@ -463,31 +465,31 @@ export default function EditorTest() {
 
         {selectedObject && (
           <div className="mt-4 pt-4 border-t">
-            <h4 className="font-bold mb-2">Selected Object</h4>
+            <h4 className="font-bold mb-2">選択中のオブジェクト</h4>
             <div className="grid grid-cols-3 gap-2">
               <button
                 className="px-4 py-2 bg-red-500 text-white rounded-md"
                 onClick={deleteSelected}
               >
-                Delete
+                削除
               </button>
               <button
                 className="px-4 py-2 bg-gray-500 text-white rounded-md"
                 onClick={bringForward}
               >
-                Forward
+                前面へ
               </button>
               <button
                 className="px-4 py-2 bg-gray-500 text-white rounded-md"
                 onClick={sendBackwards}
               >
-                Backwards
+                背面へ
               </button>
             </div>
             {selectedObject.type === "i-text" && (
               <div className="mt-4 flex flex-col gap-4">
                 <div className="flex items-center gap-2">
-                  <label>Size:</label>
+                  <label>サイズ:</label>
                   <input
                     type="number"
                     value={fontSize}
@@ -496,7 +498,7 @@ export default function EditorTest() {
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label>Color:</label>
+                  <label>色:</label>
                   <input
                     type="color"
                     value={fontColor}
@@ -505,7 +507,7 @@ export default function EditorTest() {
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <label>Font:</label>
+                  <label>フォント:</label>
                   <select
                     value={fontFamily}
                     onChange={handleFontFamilyChange}
