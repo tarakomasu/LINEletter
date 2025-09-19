@@ -54,6 +54,16 @@ const availableFonts = [
   { name: "MS Pゴシック", value: "'MS P Gothic', sans-serif" },
 ];
 
+const commonColors = [
+  { name: "黒", value: "#000000" },
+  { name: "白", value: "#FFFFFF" },
+  { name: "赤", value: "#FF0000" },
+  { name: "青", value: "#0000FF" },
+  { name: "緑", value: "#008000" },
+  { name: "黄", value: "#FFFF00" },
+  { name: "紫", value: "#800080" },
+];
+
 // --- LIFF --- //
 const LIFF_ID = "2007941017-kPwmN542";
 
@@ -66,6 +76,13 @@ const createLiffMessage = (imageUrl: string) => {
   ];
 };
 // --- END LIFF ---
+
+const fabricControlStyles = {
+  borderColor: "#22c55e",
+  cornerColor: "#22c55e",
+  cornerStrokeColor: "#22c55e",
+  transparentCorners: false,
+};
 
 export default function EditorTest() {
   const { data: session, status } = useSession();
@@ -238,10 +255,11 @@ export default function EditorTest() {
 
   const addText = () => {
     if (!activeCanvas) return;
-    const text = new fabric.IText("Tap to edit", {
+    const text = new fabric.IText("テキスト", {
       left: activeCanvas.getWidth() / 2,
       top: activeCanvas.getHeight() / 2,
       ...lastUsedTextStyle,
+      ...fabricControlStyles,
       originX: "center",
       originY: "center",
     });
@@ -263,6 +281,7 @@ export default function EditorTest() {
         image.set({
           left: activeCanvas.getWidth() / 2,
           top: activeCanvas.getHeight() / 2,
+          ...fabricControlStyles,
           originX: "center",
           originY: "center",
         });
@@ -384,7 +403,7 @@ export default function EditorTest() {
     }
   };
 
-  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const newColor = e.target.value;
     setFontColor(newColor);
     if (selectedObject && selectedObject.type === "i-text" && activeCanvas) {
@@ -527,8 +546,22 @@ export default function EditorTest() {
                     type="color"
                     value={fontColor}
                     onChange={handleColorChange}
-                    className="w-10 h-10"
+                    className="w-10 h-10 p-1 border rounded-md"
                   />
+                  <select
+                    value={fontColor}
+                    onChange={handleColorChange}
+                    className="px-2 py-1 border rounded-md w-full"
+                  >
+                    <option value="" disabled>
+                      色を選択
+                    </option>
+                    {commonColors.map((color) => (
+                      <option key={color.value} value={color.value}>
+                        {color.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="flex items-center gap-2">
                   <label>フォント:</label>
