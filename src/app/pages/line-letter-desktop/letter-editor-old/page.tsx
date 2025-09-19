@@ -91,6 +91,7 @@ export default function LetterEditor() {
             width: originalWidth,
             height: originalHeight,
           });
+          canvas.selectionBorderColor = "black";
           fabricInstances.current[index] = canvas;
           if (index === selectedPageIndex) {
             setActiveCanvas(canvas);
