@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { createClient } from "@supabase/supabase-js";
 import type { Liff } from "@line/liff";
-import { AddPageIcon, AddImageIcon, TextIcon } from "../components/icons";
+import { AddPageIcon, AddImageIcon, TextIcon, HelpIcon } from "../components/icons";
 
 const supabaseUrl = "https://vqxbspchwzhxghoswyrx.supabase.co";
 const supabaseKey =
@@ -382,8 +382,8 @@ export default function EditorTest() {
     }
   };
 
-  const buttonStyle = "flex justify-center items-center gap-2 px-4 py-2 bg-white border-2 border-green-500 text-green-500 rounded-md hover:bg-green-500 hover:text-white transition-colors w-full";
-  const disabledButtonStyle = "flex justify-center items-center gap-2 px-4 py-2 bg-gray-200 border-2 border-gray-400 text-gray-400 rounded-md w-full";
+  const buttonStyle = "flex-grow justify-center items-center gap-2 px-4 py-2 bg-white border-2 border-green-500 text-green-500 rounded-md hover:bg-green-500 hover:text-white transition-colors flex";
+  const disabledButtonStyle = "flex-grow justify-center items-center gap-2 px-4 py-2 bg-gray-200 border-2 border-gray-400 text-gray-400 rounded-md flex";
 
   return (
     <div className="min-h-screen bg-gray-200 flex">
@@ -412,55 +412,84 @@ export default function EditorTest() {
           </div>
         </div>
       )}
-      <div className="w-64 bg-white shadow-md p-4 sticky top-0 h-screen overflow-y-auto">
+      <div className="w-80 bg-white shadow-md p-4 sticky top-0 h-screen overflow-y-auto">
         <h3 className="text-xl font-bold mb-4">コントロール</h3>
         <div className="flex flex-col gap-4">
-          <button
-            className={buttonStyle}
-            onClick={addPage}
-          >
-            <AddPageIcon className="w-6 h-6" />
-            <span>ページを追加</span>
-          </button>
-          <button
-            className={buttonStyle}
-            onClick={addText}
-          >
-            <TextIcon className="w-6 h-6" />
-            <span>テキストを追加</span>
-          </button>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={addImage}
-            className="hidden"
-            id="image-upload"
-          />
-          <label
-            htmlFor="image-upload"
-            className={`${buttonStyle} cursor-pointer`}
-          >
-            <AddImageIcon className="w-6 h-6" />
-            <span>画像を追加</span>
-          </label>
-          <button
-            className={isSavingDirectly ? disabledButtonStyle : buttonStyle}
-            onClick={saveCanvasToSupabaseDirectly}
-            disabled={isSavingDirectly}
-          >
-            {isSavingDirectly ? "保存中..." : "保存"}
-          </button>
-
-          {/* --- LIFF Share Button --- */}
-          {savedImageUrl && liff && (
-            <button
-              className={buttonStyle}
-              onClick={handleShare}
-            >
-              LINEで送信
+          <div className="flex items-center gap-2">
+            <button className={buttonStyle} onClick={addPage}>
+              <AddPageIcon className="w-6 h-6" />
+              <span>ページを追加</span>
             </button>
+            <div className="relative group">
+              <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-sm text-white bg-gray-700 rounded-md scale-0 group-hover:scale-100 transition-transform origin-bottom z-10">
+                新しいページを便箋に追加します。
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button className={buttonStyle} onClick={addText}>
+              <TextIcon className="w-6 h-6" />
+              <span>テキストを追加</span>
+            </button>
+            <div className="relative group">
+              <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-sm text-white bg-gray-700 rounded-md scale-0 group-hover:scale-100 transition-transform origin-bottom z-10">
+                キャンバスに新しいテキストボックスを追加します。
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={addImage}
+              className="hidden"
+              id="image-upload"
+            />
+            <label htmlFor="image-upload" className={`${buttonStyle} cursor-pointer flex-grow`}>
+              <AddImageIcon className="w-6 h-6" />
+              <span>画像を追加</span>
+            </label>
+            <div className="relative group">
+              <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-sm text-white bg-gray-700 rounded-md scale-0 group-hover:scale-100 transition-transform origin-bottom z-10">
+                デバイスから画像をアップロードして追加します。
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              className={isSavingDirectly ? disabledButtonStyle : buttonStyle}
+              onClick={saveCanvasToSupabaseDirectly}
+              disabled={isSavingDirectly}
+            >
+              {isSavingDirectly ? "保存中..." : "保存"}
+            </button>
+            <div className="relative group">
+              <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-sm text-white bg-gray-700 rounded-md scale-0 group-hover:scale-100 transition-transform origin-bottom z-10">
+                作成した手紙を画像として保存します。
+              </span>
+            </div>
+          </div>
+
+          {savedImageUrl && liff && (
+            <div className="flex items-center gap-2">
+              <button className={buttonStyle} onClick={handleShare}>
+                LINEで送信
+              </button>
+              <div className="relative group">
+                <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-sm text-white bg-gray-700 rounded-md scale-0 group-hover:scale-100 transition-transform origin-bottom z-10">
+                  保存した手紙をLINEの友だちに共有します。
+                </span>
+              </div>
+            </div>
           )}
-          {/* --- END LIFF --- */}
         </div>
 
         {selectedObject && (
