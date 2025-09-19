@@ -6,6 +6,7 @@ import { fabric } from "fabric";
 import { createClient } from "@supabase/supabase-js";
 import type { Liff } from "@line/liff";
 import { AddPageIcon, AddImageIcon, TextIcon, HelpIcon } from "../components/icons";
+import Tooltip from "../components/Tooltip";
 
 const supabaseUrl = "https://vqxbspchwzhxghoswyrx.supabase.co";
 const supabaseKey =
@@ -420,12 +421,9 @@ export default function EditorTest() {
               <AddPageIcon className="w-6 h-6" />
               <span>ページを追加</span>
             </button>
-            <div className="relative group">
+            <Tooltip content="新しいページを便箋に追加します。">
               <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-sm text-white bg-gray-700 rounded-md scale-0 group-hover:scale-100 transition-transform origin-bottom z-10">
-                新しいページを便箋に追加します。
-              </span>
-            </div>
+            </Tooltip>
           </div>
 
           <div className="flex items-center gap-2">
@@ -433,12 +431,9 @@ export default function EditorTest() {
               <TextIcon className="w-6 h-6" />
               <span>テキストを追加</span>
             </button>
-            <div className="relative group">
+            <Tooltip content="キャンバスに新しいテキストボックスを追加します。">
               <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-sm text-white bg-gray-700 rounded-md scale-0 group-hover:scale-100 transition-transform origin-bottom z-10">
-                キャンバスに新しいテキストボックスを追加します。
-              </span>
-            </div>
+            </Tooltip>
           </div>
 
           <div className="flex items-center gap-2">
@@ -453,12 +448,9 @@ export default function EditorTest() {
               <AddImageIcon className="w-6 h-6" />
               <span>画像を追加</span>
             </label>
-            <div className="relative group">
+            <Tooltip content="デバイスから画像をアップロードして追加します。">
               <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-sm text-white bg-gray-700 rounded-md scale-0 group-hover:scale-100 transition-transform origin-bottom z-10">
-                デバイスから画像をアップロードして追加します。
-              </span>
-            </div>
+            </Tooltip>
           </div>
 
           <div className="flex items-center gap-2">
@@ -469,12 +461,9 @@ export default function EditorTest() {
             >
               {isSavingDirectly ? "保存中..." : "保存"}
             </button>
-            <div className="relative group">
+            <Tooltip content="作成した手紙を画像として保存します。">
               <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
-              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-sm text-white bg-gray-700 rounded-md scale-0 group-hover:scale-100 transition-transform origin-bottom z-10">
-                作成した手紙を画像として保存します。
-              </span>
-            </div>
+            </Tooltip>
           </div>
 
           {savedImageUrl && liff && (
@@ -482,12 +471,9 @@ export default function EditorTest() {
               <button className={buttonStyle} onClick={handleShare}>
                 LINEで送信
               </button>
-              <div className="relative group">
+              <Tooltip content="保存した手紙をLINEの友だちに共有します。">
                 <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
-                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs p-2 text-sm text-white bg-gray-700 rounded-md scale-0 group-hover:scale-100 transition-transform origin-bottom z-10">
-                  保存した手紙をLINEの友だちに共有します。
-                </span>
-              </div>
+              </Tooltip>
             </div>
           )}
         </div>
