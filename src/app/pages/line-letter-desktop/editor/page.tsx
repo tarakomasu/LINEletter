@@ -401,7 +401,9 @@ export default function EditorTest() {
     }
   };
 
-  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleColorChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const newColor = e.target.value;
     setFontColor(newColor);
     if (selectedObject && selectedObject.type === "i-text" && activeCanvas) {
@@ -544,7 +546,7 @@ export default function EditorTest() {
                     type="color"
                     value={fontColor}
                     onChange={handleColorChange}
-                    className="w-10 h-10 p-1 border rounded-md"
+                    className="w-10 h-10 p-1 "
                   />
                   <select
                     value={fontColor}
@@ -584,9 +586,10 @@ export default function EditorTest() {
         {pages.map((page, index) => (
           <div
             key={index}
-            className={`mb-4 shadow-lg ${selectedPageIndex === index
-              ? "border-4 border-blue-500 rounded-lg"
-              : "border-4 border-transparent"
+            className={`mb-4 shadow-lg ${
+              selectedPageIndex === index
+                ? "border-4 border-blue-500 rounded-lg"
+                : "border-4 border-transparent"
             }`}
             onClick={() => setSelectedPageIndex(index)}
           >
