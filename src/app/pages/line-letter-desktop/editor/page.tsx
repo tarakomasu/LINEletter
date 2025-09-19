@@ -5,8 +5,14 @@ import { useEffect, useRef, useState } from "react";
 import { fabric } from "fabric";
 import { createClient } from "@supabase/supabase-js";
 import type { Liff } from "@line/liff";
-import { AddPageIcon, AddImageIcon, TextIcon, HelpIcon } from "../components/icons";
+import {
+  AddPageIcon,
+  AddImageIcon,
+  TextIcon,
+  HelpIcon,
+} from "../components/icons";
 import Tooltip from "../components/Tooltip";
+import TemplatePickerModal from "../components/TemplatePickerModal";
 
 const supabaseUrl = "https://vqxbspchwzhxghoswyrx.supabase.co";
 const supabaseKey =
@@ -383,36 +389,19 @@ export default function EditorTest() {
     }
   };
 
-  const buttonStyle = "flex-grow justify-center items-center gap-2 px-4 py-2 bg-white border-2 border-green-500 text-green-500 rounded-md hover:bg-green-500 hover:text-white transition-colors flex";
-  const disabledButtonStyle = "flex-grow justify-center items-center gap-2 px-4 py-2 bg-gray-200 border-2 border-gray-400 text-gray-400 rounded-md flex";
+  const buttonStyle =
+    "flex-grow justify-center items-center gap-2 px-4 py-2 bg-white border-2 border-green-500 text-green-500 rounded-md hover:bg-green-500 hover:text-white transition-colors flex";
+  const disabledButtonStyle =
+    "flex-grow justify-center items-center gap-2 px-4 py-2 bg-gray-200 border-2 border-gray-400 text-gray-400 rounded-md flex";
 
   return (
     <div className="min-h-screen bg-gray-200 flex">
-      {/* No need for <Script> tag if using dynamic import */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-          <div className="bg-white p-8 rounded-lg shadow-xl">
-            <h2 className="text-2xl font-bold mb-4">Choose a Template</h2>
-            <div className="grid grid-cols-2 gap-4">
-              {templatePapers.map((template, index) => (
-                <img
-                  key={index}
-                  src={template}
-                  alt={`Template ${index + 1}`}
-                  className="w-48 h-auto cursor-pointer border-2 border-transparent hover:border-blue-500"
-                  onClick={() => handleSelectTemplate(template)}
-                />
-              ))}
-            </div>
-            <button
-              className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <TemplatePickerModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelectTemplate={handleSelectTemplate}
+        templates={templatePapers}
+      />
       <div className="w-80 bg-white shadow-md p-4 sticky top-0 h-screen overflow-y-auto">
         <h3 className="text-xl font-bold mb-4">コントロール</h3>
         <div className="flex flex-col gap-4">
@@ -444,7 +433,10 @@ export default function EditorTest() {
               className="hidden"
               id="image-upload"
             />
-            <label htmlFor="image-upload" className={`${buttonStyle} cursor-pointer flex-grow`}>
+            <label
+              htmlFor="image-upload"
+              className={`${buttonStyle} cursor-pointer flex-grow`}
+            >
               <AddImageIcon className="w-6 h-6" />
               <span>画像を追加</span>
             </label>
