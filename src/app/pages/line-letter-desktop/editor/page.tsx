@@ -432,7 +432,7 @@ export default function EditorTest() {
         );
       }
 
-      const shareUrl = `${window.location.origin}/letters?letterId=${letterId}`;
+      const shareUrl = `${window.location.origin}/view?letterId=${letterId}`;
       const messages = createLiffMessage(shareUrl);
 
       const result = await liff.shareTargetPicker(messages as any);
