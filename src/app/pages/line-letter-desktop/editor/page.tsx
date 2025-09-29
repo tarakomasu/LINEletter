@@ -417,7 +417,6 @@ export default function EditorTest() {
       }
 
       const imageRecords = uploadedImages.map(({ url, pageNumber }) => ({
-        id: crypto.randomUUID(),
         letterId,
         imageURL: url,
         pageNumber,
