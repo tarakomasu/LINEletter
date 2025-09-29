@@ -68,11 +68,11 @@ const commonColors = [
 // --- LIFF --- //
 const LIFF_ID = "2007941017-kPwmN542";
 
-const createLiffMessage = (imageUrl: string) => {
+const createLiffMessage = (shareUrl: string) => {
   return [
     {
       type: "text" as const,
-      text: `手紙が届きました！\nこちらからご覧ください：\n${imageUrl}`,
+      text: `手紙が届きました！\nこちらからご覧ください：\n${shareUrl}`,
     },
   ];
 };
@@ -92,8 +92,8 @@ export default function EditorTest() {
   const [activeCanvas, setActiveCanvas] = useState<fabric.Canvas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [templatePapers, setTemplatePapers] = useState<string[]>([]);
-  const [isSavingDirectly, setIsSavingDirectly] = useState(false);
   const [liff, setLiff] = useState<Liff | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -102,9 +102,6 @@ export default function EditorTest() {
       console.log("User is not authenticated.");
     }
   }, [status, session]);
-
-  // --- LIFF ---
-  const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const initLiff = async () => {
@@ -239,9 +236,9 @@ export default function EditorTest() {
   };
 
   const handleSelectTemplate = (template: string) => {
-    const newPage = { 
+    const newPage = {
       id: `page-${Date.now()}`,
-      background: template 
+      background: template,
     };
     setPages((prevPages) => {
       const newPages = [...prevPages, newPage];
@@ -257,7 +254,13 @@ export default function EditorTest() {
       return;
     }
 
-    if (window.confirm(`ページ ${selectedPageIndex + 1} を削除しますか？この操作は元に戻せません。`)) {
+    if (
+      window.confirm(
+        `ページ ${
+          selectedPageIndex + 1
+        } を削除しますか？この操作は元に戻せません。`
+      )
+    ) {
       const canvasToDispose = fabricInstances.current[selectedPageIndex];
       if (canvasToDispose) {
         canvasToDispose.dispose();
@@ -321,80 +324,133 @@ export default function EditorTest() {
     e.target.value = "";
   };
 
-  const saveCanvasToSupabaseDirectly = async () => {
-    if (!activeCanvas || isSavingDirectly) return;
-
-    setIsSavingDirectly(true);
-    setSavedImageUrl(null); // Reset on new save attempt
-    try {
-      const targetWidth = 1400;
-      const displayWidth = activeCanvas.getWidth();
-      const multiplier = targetWidth / displayWidth;
-      const dataUrl = activeCanvas.toDataURL({
-        format: "png",
-        quality: 1,
-        multiplier: multiplier,
-      });
-
-      const blob = dataURLtoBlob(dataUrl);
-      const fileName = `letter-direct-${Date.now()}.png`;
-
-      const { data, error: uploadError } = await supabase.storage
-        .from(bucketName)
-        .upload(fileName, blob, {
-          contentType: "image/png",
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw new Error(`Supabase upload failed: ${uploadError.message}`);
-      }
-
-      const { data: publicUrlData } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(fileName);
-
-      if (!publicUrlData) {
-        throw new Error("Failed to get public URL from Supabase.");
-      }
-
-      alert("Image saved! You can now share it on LINE.");
-      setSavedImageUrl(publicUrlData.publicUrl); // Set state to show share button
-    } catch (error) {
-      console.error("Error saving canvas directly:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "An unknown error occurred.";
-      alert(`Error saving canvas directly: ${errorMessage}`);
-    } finally {
-      setIsSavingDirectly(false);
-    }
-  };
-
-  // --- LIFF ---
   const handleShare = async () => {
-    if (!savedImageUrl || !liff) {
-      alert("Image not saved or LIFF not initialized.");
+    if (!liff) {
+      alert(
+        "LIFFの初期化が完了していません。しばらく待ってから再度お試しください。"
+      );
       return;
     }
 
     if (!liff.isLoggedIn()) {
-      // Although shareTargetPicker can work without this, it's good practice
-      // to ensure the user is logged in for a better experience.
       liff.login();
       return; // login() redirects, so we stop here.
     }
 
     try {
-      const messages = createLiffMessage(savedImageUrl);
+      if (isSharing) return;
+      setIsSharing(true);
+
+      const canvases = fabricInstances.current;
+      if (!canvases.length) {
+        throw new Error("ページが存在しません。先にページを追加してください。");
+      }
+
+      const letterId = crypto.randomUUID();
+      const author =
+        (session?.user?.name && session.user.name.trim()) ||
+        (session?.user?.name && session.user.name.trim()) ||
+        "ゲスト";
+
+      const uploadedImages: { url: string; pageNumber: number }[] = [];
+
+      for (let index = 0; index < pages.length; index += 1) {
+        const canvas = canvases[index];
+        if (!canvas) {
+          throw new Error(
+            `ページ${
+              index + 1
+            }のキャンバスが準備できていません。少し待ってから再度お試しください。`
+          );
+        }
+
+        const targetWidth = 1400;
+        const displayWidth = canvas.getWidth();
+        const multiplier = targetWidth / displayWidth;
+        const dataUrl = canvas.toDataURL({
+          format: "png",
+          quality: 1,
+          multiplier,
+        });
+
+        const blob = dataURLtoBlob(dataUrl);
+        const filePath = `${letterId}/page-${String(index + 1).padStart(
+          2,
+          "0"
+        )}-${Date.now()}.png`;
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, blob, {
+            contentType: "image/png",
+            upsert: false,
+          });
+
+        if (uploadError) {
+          throw new Error(
+            `Supabase Storageへのアップロードに失敗しました: ${uploadError.message}`
+          );
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from(bucketName)
+          .getPublicUrl(filePath);
+
+        if (!publicUrlData?.publicUrl) {
+          throw new Error("アップロードした画像の公開URL取得に失敗しました。");
+        }
+
+        uploadedImages.push({
+          url: publicUrlData.publicUrl,
+          pageNumber: index + 1,
+        });
+      }
+
+      const { error: letterInsertError } = await supabase
+        .from("letters")
+        .insert({ id: letterId, author });
+
+      if (letterInsertError) {
+        throw new Error(
+          `lettersテーブルへの登録に失敗しました: ${letterInsertError.message}`
+        );
+      }
+
+      const imageRecords = uploadedImages.map(({ url, pageNumber }) => ({
+        id: crypto.randomUUID(),
+        letterId,
+        imageURL: url,
+        pageNumber,
+      }));
+
+      const { error: letterImagesError } = await supabase
+        .from("letterImages")
+        .insert(imageRecords);
+
+      if (letterImagesError) {
+        throw new Error(
+          `letterImagesテーブルへの登録に失敗しました: ${letterImagesError.message}`
+        );
+      }
+
+      const shareUrl = `${window.location.origin}/letters?letterId=${letterId}`;
+      const messages = createLiffMessage(shareUrl);
+
       const result = await liff.shareTargetPicker(messages as any);
       if (result) {
-        alert("Letter shared successfully!");
+        alert("LINEでの共有が完了しました！");
       } else {
-        console.log("Share was cancelled by the user.");
+        console.log("ユーザーが共有をキャンセルしました。");
       }
     } catch (error) {
-      console.error("Error sharing message:", error);
-      alert("Failed to share letter. Please try again.");
+      console.error("Error during share process:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "原因不明のエラーが発生しました。";
+      alert(`送信処理に失敗しました: ${errorMessage}`);
+    } finally {
+      setIsSharing(false);
     }
   };
   // --- END LIFF ---
@@ -511,27 +567,16 @@ export default function EditorTest() {
 
           <div className="flex items-center gap-2">
             <button
-              className={isSavingDirectly ? disabledButtonStyle : buttonStyle}
-              onClick={saveCanvasToSupabaseDirectly}
-              disabled={isSavingDirectly}
+              className={isSharing ? disabledButtonStyle : buttonStyle}
+              onClick={handleShare}
+              disabled={isSharing}
             >
-              {isSavingDirectly ? "保存中..." : "保存"}
+              {isSharing ? "送信準備中..." : "LINEで送信"}
             </button>
-            <Tooltip content="作成した手紙を画像として保存します。">
+            <Tooltip content="全ページを保存し、LINEで送信します。">
               <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
             </Tooltip>
           </div>
-
-          {savedImageUrl && liff && (
-            <div className="flex items-center gap-2">
-              <button className={buttonStyle} onClick={handleShare}>
-                LINEで送信
-              </button>
-              <Tooltip content="保存した手紙をLINEの友だちに共有します。">
-                <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
-              </Tooltip>
-            </div>
-          )}
         </div>
 
         {pages.length > 1 && (
@@ -628,9 +673,10 @@ export default function EditorTest() {
         {pages.map((page, index) => (
           <div
             key={page.id}
-            className={`mb-4 shadow-lg ${selectedPageIndex === index
-              ? "border-4 border-blue-500 rounded-lg"
-              : "border-4 border-transparent"
+            className={`mb-4 shadow-lg ${
+              selectedPageIndex === index
+                ? "border-4 border-blue-500 rounded-lg"
+                : "border-4 border-transparent"
             }`}
             onClick={() => setSelectedPageIndex(index)}
           >
