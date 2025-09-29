@@ -8,7 +8,7 @@ import { Suspense } from "react";
 
 const supabaseUrl = "https://vqxbspchwzhxghoswyrx.supabase.co";
 const supabaseKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxeGJzcGNod3poeGdob3N3eXJ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQyMzUzNjcsImV4cCI6MjA2OTgxMTM2N30.3_N2-h-S3n1Vi4t30Uedp_uOaIn_2R33i_l1f2d_iNY";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxeGJzcGNod3poeGdob3N3eXJ4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDIzNTM2NywiZXhwIjoyMDY5ODExMzY3fQ.P9JEaOibrGXvvTsJxf2IfgMJzw53MCA6PfX7UHjs6NM";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface LetterImage {
@@ -54,7 +54,9 @@ function LetterViewer() {
 
         setImages(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "不明なエラーが発生しました。");
+        setError(
+          err instanceof Error ? err.message : "不明なエラーが発生しました。"
+        );
       } finally {
         setLoading(false);
       }
@@ -95,11 +97,13 @@ function LetterViewer() {
           </div>
         ))}
       </div>
-       <footer className="mt-10 text-center">
-          <p className="text-gray-500">
-            <a href="/" className="hover:underline">LINE Letterで手紙を作成する</a>
-          </p>
-        </footer>
+      <footer className="mt-10 text-center">
+        <p className="text-gray-500">
+          <a href="/" className="hover:underline">
+            LINE Letterで手紙を作成する
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
