@@ -77,6 +77,27 @@ const createLiffMessage = (shareUrl: string) => {
 };
 // --- END LIFF ---
 
+const SparkleIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    {...props}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M12 3L14.34 8.66L20 11L14.34 13.34L12 19L9.66 13.34L4 11L9.66 8.66L12 3z" />
+    <path d="M5 3v4" />
+    <path d="M19 17v4" />
+    <path d="M3 5h4" />
+    <path d="M17 19h4" />
+  </svg>
+);
+
 export default function EditorTest() {
   const { data: session, status } = useSession();
   const [pages, setPages] = useState<Page[]>([
@@ -131,6 +152,8 @@ export default function EditorTest() {
     fill: "#000000",
     fontFamily: "'Times New Roman', serif",
   });
+  // State for sparkle effect
+  const [sparkleDensity, setSparkleDensity] = useState(40);
 
   useEffect(() => {
     setTemplatePapers([
@@ -210,16 +233,21 @@ export default function EditorTest() {
   }, [selectedPageIndex, pages, activeCanvas]);
 
   useEffect(() => {
-    if (selectedObject && selectedObject.type === "i-text") {
-      const textObject = selectedObject as fabric.IText;
-      const style = {
-        fontSize: textObject.fontSize || 40,
-        fill: (textObject.fill as string) || "#000000",
-        fontFamily: textObject.fontFamily || "'Times New Roman', serif",
-      };
-      setFontSize(style.fontSize);
-      setFontColor(style.fill);
-      setFontFamily(style.fontFamily);
+    if (selectedObject) {
+      if (selectedObject.type === "i-text") {
+        const textObject = selectedObject as fabric.IText;
+        const style = {
+          fontSize: textObject.fontSize || 40,
+          fill: (textObject.fill as string) || "#000000",
+          fontFamily: textObject.fontFamily || "'Times New Roman', serif",
+        };
+        setFontSize(style.fontSize);
+        setFontColor(style.fill);
+        setFontFamily(style.fontFamily);
+      } else if (selectedObject.get("type") === "sparkle-effect") {
+        const effectGroup = selectedObject as fabric.Group;
+        setSparkleDensity(effectGroup.getObjects().length);
+      }
     }
   }, [selectedObject]);
 
@@ -321,6 +349,121 @@ export default function EditorTest() {
     reader.readAsDataURL(file);
 
     e.target.value = "";
+  };
+
+  const addSparkleEffect = () => {
+    if (!activeCanvas) return;
+
+    const particles: fabric.Object[] = [];
+    const particleCount = 40; // Initial density
+    const areaWidth = 300;
+    const areaHeight = 300;
+
+    for (let i = 0; i < particleCount; i++) {
+      const particle = new fabric.Circle({
+        left: Math.random() * areaWidth,
+        top: Math.random() * areaHeight,
+        radius: Math.random() * 2 + 1,
+        fill: "rgba(255, 255, 255, 0.8)",
+        selectable: false,
+        evented: false,
+      });
+      particles.push(particle);
+
+      const animate = (target: fabric.Object) => {
+        const duration = Math.random() * 1000 + 500;
+        const delay = Math.random() * 500;
+
+        setTimeout(() => {
+          target.animate("opacity", 0, {
+            duration,
+            onChange: activeCanvas.renderAll.bind(activeCanvas),
+            onComplete: () => {
+              target.set({
+                left: Math.random() * areaWidth,
+                top: Math.random() * areaHeight,
+                opacity: 1,
+              });
+              animate(target);
+            },
+          });
+        }, delay);
+      };
+      animate(particle);
+    }
+
+    const group = new fabric.Group(particles, {
+      left: activeCanvas.getWidth() / 2 - areaWidth / 2,
+      top: activeCanvas.getHeight() / 2 - areaHeight / 2,
+      // @ts-ignore
+      type: "sparkle-effect",
+      selectable: true,
+      evented: true,
+      hasControls: true,
+      hasBorders: true,
+    });
+
+    activeCanvas.add(group);
+    activeCanvas.setActiveObject(group);
+    activeCanvas.renderAll();
+  };
+
+  const handleSparkleDensityChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (!selectedObject || selectedObject.get("type") !== "sparkle-effect")
+      return;
+
+    const newDensity = parseInt(e.target.value, 10);
+    setSparkleDensity(newDensity);
+
+    const group = selectedObject as fabric.Group;
+    const currentParticles = group.getObjects();
+    const currentCount = currentParticles.length;
+    const areaWidth = group.width ?? 300;
+    const areaHeight = group.height ?? 300;
+
+    if (newDensity > currentCount) {
+      // Add particles
+      for (let i = 0; i < newDensity - currentCount; i++) {
+        const particle = new fabric.Circle({
+          left: Math.random() * areaWidth,
+          top: Math.random() * areaHeight,
+          radius: Math.random() * 2 + 1,
+          fill: "rgba(255, 255, 255, 0.8)",
+          selectable: false,
+          evented: false,
+        });
+        group.addWithUpdate(particle);
+
+        const animate = (target: fabric.Object) => {
+          const duration = Math.random() * 1000 + 500;
+          const delay = Math.random() * 500;
+          setTimeout(() => {
+            target.animate("opacity", 0, {
+              duration,
+              onChange: activeCanvas?.renderAll.bind(activeCanvas),
+              onComplete: () => {
+                target.set({
+                  left: Math.random() * areaWidth,
+                  top: Math.random() * areaHeight,
+                  opacity: 1,
+                });
+                animate(target);
+              },
+            });
+          }, delay);
+        };
+        animate(particle);
+      }
+    } else if (newDensity < currentCount) {
+      // Remove particles
+      for (let i = 0; i < currentCount - newDensity; i++) {
+        group.remove(currentParticles[currentParticles.length - 1 - i]);
+      }
+    }
+    group.setCoords();
+    activeCanvas?.renderAll();
   };
 
   const handleShare = async () => {
@@ -564,6 +707,16 @@ export default function EditorTest() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button className={buttonStyle} onClick={addSparkleEffect}>
+              <SparkleIcon className="w-6 h-6" />
+              <span>エフェクトを追加</span>
+            </button>
+            <Tooltip content="キラキラするエフェクトを追加します。">
+              <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+            </Tooltip>
+          </div>
+
+          <div className="flex items-center gap-2">
             <button
               className={isSharing ? disabledButtonStyle : buttonStyle}
               onClick={handleShare}
@@ -661,6 +814,23 @@ export default function EditorTest() {
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+            )}
+            {selectedObject.get("type") === "sparkle-effect" && (
+              <div className="mt-4 flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                  <label>キラキラの密度:</label>
+                  <input
+                    type="range"
+                    min="10"
+                    max="100"
+                    step="5"
+                    value={sparkleDensity}
+                    onChange={handleSparkleDensityChange}
+                    className="w-full"
+                  />
+                  <span>{sparkleDensity}</span>
                 </div>
               </div>
             )}
