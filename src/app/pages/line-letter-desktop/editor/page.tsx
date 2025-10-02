@@ -154,6 +154,7 @@ export default function EditorTest() {
   });
   // State for sparkle effect
   const [sparkleDensity, setSparkleDensity] = useState(40);
+  const [sparkleColor, setSparkleColor] = useState<string>("#FFFF00");
 
   useEffect(() => {
     setTemplatePapers([
@@ -247,6 +248,9 @@ export default function EditorTest() {
       } else if (selectedObject.get("type") === "sparkle-effect") {
         const effectGroup = selectedObject as fabric.Group;
         setSparkleDensity(effectGroup.getObjects().length);
+        // @ts-ignore
+        const currentColor = effectGroup.get("effectColor") || "#FFFF00";
+        setSparkleColor(currentColor);
       }
     }
   }, [selectedObject]);
@@ -358,13 +362,17 @@ export default function EditorTest() {
     const particleCount = 40; // Initial density
     const areaWidth = 300;
     const areaHeight = 300;
+    const initialColor = "#FFFF00";
+    const initialColorObj = new fabric.Color(initialColor);
+    initialColorObj.setAlpha(0.8);
+    const initialRgbaColor = initialColorObj.toRgba();
 
     for (let i = 0; i < particleCount; i++) {
       const particle = new fabric.Circle({
         left: Math.random() * areaWidth,
         top: Math.random() * areaHeight,
         radius: Math.random() * 2 + 1,
-        fill: "rgba(255, 255, 255, 0.8)",
+        fill: initialRgbaColor,
         selectable: false,
         evented: false,
       });
@@ -397,6 +405,8 @@ export default function EditorTest() {
       top: activeCanvas.getHeight() / 2 - areaHeight / 2,
       // @ts-ignore
       type: "sparkle-effect",
+      // @ts-ignore
+      effectColor: initialColor,
       selectable: true,
       evented: true,
       hasControls: true,
@@ -425,12 +435,15 @@ export default function EditorTest() {
 
     if (newDensity > currentCount) {
       // Add particles
+      const sparkleColorObj = new fabric.Color(sparkleColor);
+      sparkleColorObj.setAlpha(0.8);
+      const newRgbaColor = sparkleColorObj.toRgba();
       for (let i = 0; i < newDensity - currentCount; i++) {
         const particle = new fabric.Circle({
           left: Math.random() * areaWidth,
           top: Math.random() * areaHeight,
           radius: Math.random() * 2 + 1,
-          fill: "rgba(255, 255, 255, 0.8)",
+          fill: newRgbaColor,
           selectable: false,
           evented: false,
         });
@@ -464,6 +477,32 @@ export default function EditorTest() {
     }
     group.setCoords();
     activeCanvas?.renderAll();
+  };
+
+  const handleSparkleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newColorHex = e.target.value;
+    setSparkleColor(newColorHex);
+
+    if (
+      selectedObject &&
+      selectedObject.get("type") === "sparkle-effect" &&
+      activeCanvas
+    ) {
+      const group = selectedObject as fabric.Group;
+      // group.set("effectColor", newColorHex); // 型エラーのためコメントアウト
+
+      // effectColorをgroupのカスタムプロパティとして直接設定
+      (group as any).effectColor = newColorHex;
+
+      const sparkleColorObj = new fabric.Color(newColorHex);
+      sparkleColorObj.setAlpha(0.8);
+      const newRgbaColor = sparkleColorObj.toRgba();
+
+      group.getObjects().forEach((particle) => {
+        (particle as fabric.Circle).set("fill", newRgbaColor);
+      });
+      activeCanvas.renderAll();
+    }
   };
 
   const handleShare = async () => {
@@ -831,6 +870,15 @@ export default function EditorTest() {
                     className="w-full"
                   />
                   <span>{sparkleDensity}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label>色:</label>
+                  <input
+                    type="color"
+                    value={sparkleColor}
+                    onChange={handleSparkleColorChange}
+                    className="w-10 h-10"
+                  />
                 </div>
               </div>
             )}
