@@ -19,6 +19,8 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 const bucketName = "line-letter";
 
+fabric.Object.prototype.borderColor = "black";
+
 // Helper function to convert data URL to Blob
 const dataURLtoBlob = (dataurl: string) => {
   const arr = dataurl.split(",");
@@ -407,6 +409,10 @@ export default function EditorTest() {
       type: "sparkle-effect",
       // @ts-ignore
       effectColor: initialColor,
+      // @ts-ignore
+      initialWidth: areaWidth,
+      // @ts-ignore
+      initialHeight: areaHeight,
       selectable: true,
       evented: true,
       hasControls: true,
@@ -430,14 +436,17 @@ export default function EditorTest() {
     const group = selectedObject as fabric.Group;
     const currentParticles = group.getObjects();
     const currentCount = currentParticles.length;
-    const areaWidth = group.width ?? 300;
-    const areaHeight = group.height ?? 300;
+    // @ts-ignore
+    const areaWidth = group.initialWidth ?? 300;
+    // @ts-ignore
+    const areaHeight = group.initialHeight ?? 300;
 
     if (newDensity > currentCount) {
-      // Add particles
-      const sparkleColorObj = new fabric.Color(sparkleColor);
-      sparkleColorObj.setAlpha(0.8);
-      const newRgbaColor = sparkleColorObj.toRgba();
+      // パーティクルを追加
+      const colorObj = new fabric.Color(sparkleColor);
+      // setAlphaはvoidを返すので、colorObjを使ってtoRgba()を呼び出す
+      colorObj.setAlpha(0.8);
+      const newRgbaColor = colorObj.toRgba();
       for (let i = 0; i < newDensity - currentCount; i++) {
         const particle = new fabric.Circle({
           left: Math.random() * areaWidth,
@@ -447,7 +456,7 @@ export default function EditorTest() {
           selectable: false,
           evented: false,
         });
-        group.addWithUpdate(particle);
+        group.add(particle); // Use add instead of addWithUpdate
 
         const animate = (target: fabric.Object) => {
           const duration = Math.random() * 1000 + 500;
