@@ -15,11 +15,9 @@ export default function Home() {
     );
   }
 
-  // if (session) {
-  //   redirect("/pages/app-list");
-  // } else {
-  //   redirect("/pages/landing");
-  // }
-
-  return null; // Or a loading spinner
+  if (session) {
+    redirect("/pages/app-list");
+  } else {
+    redirect("/pages/landing");
+  }
 }
