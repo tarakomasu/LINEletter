@@ -19,7 +19,9 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 const bucketName = "line-letter";
 
-fabric.Object.prototype.borderColor = "black";
+fabric.Object.prototype.borderColor = "#06C755";
+fabric.Object.prototype.cornerColor = "black";
+fabric.Object.prototype.cornerStrokeColor = "black";
 
 // Helper function to convert data URL to Blob
 const dataURLtoBlob = (dataurl: string) => {
