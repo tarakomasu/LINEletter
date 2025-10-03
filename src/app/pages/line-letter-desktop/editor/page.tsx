@@ -13,6 +13,11 @@ import {
 } from "../components/icons";
 import Tooltip from "../components/Tooltip";
 import TemplatePickerModal from "../components/TemplatePickerModal";
+import {
+  createSparkleEffect,
+  updateSparkleDensity,
+  updateSparkleColor,
+} from "@/lib/effects/sparkle";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -22,7 +27,6 @@ const bucketName = "line-letter";
 fabric.Object.prototype.borderColor = "#06C755";
 fabric.Object.prototype.cornerColor = "black";
 fabric.Object.prototype.cornerStrokeColor = "black";
-
 // Helper function to convert data URL to Blob
 const dataURLtoBlob = (dataurl: string) => {
   const arr = dataurl.split(",");
@@ -360,134 +364,29 @@ export default function EditorTest() {
   };
 
   const addSparkleEffect = () => {
-    if (!activeCanvas) return;
-
-    const particles: fabric.Object[] = [];
-    const particleCount = 40; // Initial density
-    const areaWidth = 300;
-    const areaHeight = 300;
-    const initialColor = "#FFFF00";
-    const initialColorObj = new fabric.Color(initialColor);
-    initialColorObj.setAlpha(0.8);
-    const initialRgbaColor = initialColorObj.toRgba();
-
-    for (let i = 0; i < particleCount; i++) {
-      const particle = new fabric.Circle({
-        left: Math.random() * areaWidth,
-        top: Math.random() * areaHeight,
-        radius: Math.random() * 2 + 1,
-        fill: initialRgbaColor,
-        selectable: false,
-        evented: false,
-      });
-      particles.push(particle);
-
-      const animate = (target: fabric.Object) => {
-        const duration = Math.random() * 1000 + 500;
-        const delay = Math.random() * 500;
-
-        setTimeout(() => {
-          target.animate("opacity", 0, {
-            duration,
-            onChange: activeCanvas.renderAll.bind(activeCanvas),
-            onComplete: () => {
-              target.set({
-                left: Math.random() * areaWidth,
-                top: Math.random() * areaHeight,
-                opacity: 1,
-              });
-              animate(target);
-            },
-          });
-        }, delay);
-      };
-      animate(particle);
+    if (activeCanvas) {
+      createSparkleEffect(activeCanvas);
     }
-
-    const group = new fabric.Group(particles, {
-      left: activeCanvas.getWidth() / 2 - areaWidth / 2,
-      top: activeCanvas.getHeight() / 2 - areaHeight / 2,
-      // @ts-ignore
-      type: "sparkle-effect",
-      // @ts-ignore
-      effectColor: initialColor,
-      // @ts-ignore
-      initialWidth: areaWidth,
-      // @ts-ignore
-      initialHeight: areaHeight,
-      selectable: true,
-      evented: true,
-      hasControls: true,
-      hasBorders: true,
-    });
-
-    activeCanvas.add(group);
-    activeCanvas.setActiveObject(group);
-    activeCanvas.renderAll();
   };
 
   const handleSparkleDensityChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    if (!selectedObject || selectedObject.get("type") !== "sparkle-effect")
-      return;
-
     const newDensity = parseInt(e.target.value, 10);
     setSparkleDensity(newDensity);
 
-    const group = selectedObject as fabric.Group;
-    const currentParticles = group.getObjects();
-    const currentCount = currentParticles.length;
-    // @ts-ignore
-    const areaWidth = group.initialWidth ?? 300;
-    // @ts-ignore
-    const areaHeight = group.initialHeight ?? 300;
-
-    if (newDensity > currentCount) {
-      // パーティクルを追加
-      const colorObj = new fabric.Color(sparkleColor);
-      // setAlphaはvoidを返すので、colorObjを使ってtoRgba()を呼び出す
-      colorObj.setAlpha(0.8);
-      const newRgbaColor = colorObj.toRgba();
-      for (let i = 0; i < newDensity - currentCount; i++) {
-        const particle = new fabric.Circle({
-          left: Math.random() * areaWidth,
-          top: Math.random() * areaHeight,
-          radius: Math.random() * 2 + 1,
-          fill: newRgbaColor,
-          selectable: false,
-          evented: false,
-        });
-        group.add(particle); // Use add instead of addWithUpdate
-
-        const animate = (target: fabric.Object) => {
-          const duration = Math.random() * 1000 + 500;
-          const delay = Math.random() * 500;
-          setTimeout(() => {
-            target.animate("opacity", 0, {
-              duration,
-              onChange: activeCanvas?.renderAll.bind(activeCanvas),
-              onComplete: () => {
-                target.set({
-                  left: Math.random() * areaWidth,
-                  top: Math.random() * areaHeight,
-                  opacity: 1,
-                });
-                animate(target);
-              },
-            });
-          }, delay);
-        };
-        animate(particle);
-      }
-    } else if (newDensity < currentCount) {
-      // Remove particles
-      for (let i = 0; i < currentCount - newDensity; i++) {
-        group.remove(currentParticles[currentParticles.length - 1 - i]);
-      }
+    if (
+      selectedObject &&
+      selectedObject.get("type") === "sparkle-effect" &&
+      activeCanvas
+    ) {
+      updateSparkleDensity(
+        selectedObject as fabric.Group,
+        activeCanvas,
+        newDensity,
+        sparkleColor
+      );
     }
-    group.setCoords();
-    activeCanvas?.renderAll();
   };
 
   const handleSparkleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -499,20 +398,11 @@ export default function EditorTest() {
       selectedObject.get("type") === "sparkle-effect" &&
       activeCanvas
     ) {
-      const group = selectedObject as fabric.Group;
-      // group.set("effectColor", newColorHex); // 型エラーのためコメントアウト
-
-      // effectColorをgroupのカスタムプロパティとして直接設定
-      (group as any).effectColor = newColorHex;
-
-      const sparkleColorObj = new fabric.Color(newColorHex);
-      sparkleColorObj.setAlpha(0.8);
-      const newRgbaColor = sparkleColorObj.toRgba();
-
-      group.getObjects().forEach((particle) => {
-        (particle as fabric.Circle).set("fill", newRgbaColor);
-      });
-      activeCanvas.renderAll();
+      updateSparkleColor(
+        selectedObject as fabric.Group,
+        activeCanvas,
+        newColorHex
+      );
     }
   };
 
