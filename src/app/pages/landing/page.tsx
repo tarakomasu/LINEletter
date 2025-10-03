@@ -33,7 +33,7 @@ export default function Home() {
               </div>
               <img
                 alt="Hero"
-                className="mx-auto aspect-video overflow-hidden rounded-xl object-cover sm:w-full lg:order-last lg:aspect-square"
+                className="mx-auto h-auto w-full overflow-hidden rounded-xl lg:order-last"
                 height="550"
                 src="/landing-page/m1kbDbreCW3gAcG57W9u1759468198-1759468215.gif"
                 width="550"
