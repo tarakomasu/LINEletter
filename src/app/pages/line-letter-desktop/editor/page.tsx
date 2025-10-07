@@ -181,15 +181,12 @@ export default function EditorTest() {
         const img = new Image();
         img.src = page.background;
         img.onload = () => {
-          const targetWidth = 1400;
-          const targetHeight = 2048;
-          const aspectRatio = targetWidth / targetHeight;
-          const displayHeight = window.innerHeight * 0.9;
-          const displayWidth = displayHeight * aspectRatio;
+          const logicalWidth = 1400;
+          const logicalHeight = 2048;
 
           const canvas = new fabric.Canvas(canvasEl, {
-            width: displayWidth,
-            height: displayHeight,
+            width: logicalWidth,
+            height: logicalHeight,
           });
           canvas.selectionBorderColor = "black";
           fabricInstances.current[index] = canvas;
@@ -200,8 +197,8 @@ export default function EditorTest() {
           fabric.Image.fromURL(img.src, (bgImg) => {
             if (bgImg.width && bgImg.height) {
               canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas), {
-                scaleX: displayWidth / bgImg.width,
-                scaleY: displayHeight / bgImg.height,
+                scaleX: logicalWidth / bgImg.width,
+                scaleY: logicalHeight / bgImg.height,
               });
             } else {
               canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas));
@@ -434,7 +431,11 @@ export default function EditorTest() {
         (session?.user?.name && session.user.name.trim()) ||
         "ゲスト";
 
-      const uploadedImages: { url: string; pageNumber: number }[] = [];
+      const uploadedImages: {
+        url: string;
+        pageNumber: number;
+        imageEffectsJson: string;
+      }[] = [];
 
       for (let index = 0; index < pages.length; index += 1) {
         const canvas = canvases[index];
@@ -446,6 +447,12 @@ export default function EditorTest() {
           );
         }
 
+        // 1. Generate static image (excluding effects)
+        const sparkleEffects = canvas
+          .getObjects()
+          .filter((obj) => (obj as any).type === "sparkle-effect");
+        sparkleEffects.forEach((effect) => effect.set("visible", false));
+
         const targetWidth = 1400;
         const displayWidth = canvas.getWidth();
         const multiplier = targetWidth / displayWidth;
@@ -455,6 +462,24 @@ export default function EditorTest() {
           multiplier,
         });
 
+        sparkleEffects.forEach((effect) => effect.set("visible", true));
+
+        // 2. Generate JSON for dynamic effects
+        const customProperties = [
+          "type",
+          "effectColor",
+          "initialWidth",
+          "initialHeight",
+        ];
+        const dynamicObjectsJSON = sparkleEffects.map((obj) =>
+          obj.toJSON(customProperties)
+        );
+        const dynamicLayerJSON = JSON.stringify({
+          version: fabric.version,
+          objects: dynamicObjectsJSON,
+        });
+
+        // 3. Upload static image
         const blob = dataURLtoBlob(dataUrl);
         const filePath = `${letterId}/page-${String(index + 1).padStart(
           2,
@@ -485,9 +510,11 @@ export default function EditorTest() {
         uploadedImages.push({
           url: publicUrlData.publicUrl,
           pageNumber: index + 1,
+          imageEffectsJson: dynamicLayerJSON,
         });
       }
 
+      // 4. Save records to database
       const { error: letterInsertError } = await supabase
         .from("letters")
         .insert({ id: letterId, author });
@@ -498,11 +525,14 @@ export default function EditorTest() {
         );
       }
 
-      const imageRecords = uploadedImages.map(({ url, pageNumber }) => ({
-        letterId,
-        imageURL: url,
-        pageNumber,
-      }));
+      const imageRecords = uploadedImages.map(
+        ({ url, pageNumber, imageEffectsJson }) => ({
+          letterId,
+          imageURL: url,
+          pageNumber,
+          imageEffectsJson,
+        })
+      );
 
       const { error: letterImagesError } = await supabase
         .from("letterImages")
@@ -514,6 +544,7 @@ export default function EditorTest() {
         );
       }
 
+      // 5. Share via LIFF
       const shareUrl = `${window.location.origin}/view?letterId=${letterId}`;
       const messages = createLiffMessage(shareUrl);
 
@@ -790,17 +821,19 @@ export default function EditorTest() {
         {pages.map((page, index) => (
           <div
             key={page.id}
-            className={`mb-4 shadow-lg ${
+            className={`mb-4 shadow-lg w-full max-w-2xl ${
               selectedPageIndex === index
                 ? "border-4 border-blue-500 rounded-lg"
                 : "border-4 border-transparent"
             }`}
             onClick={() => setSelectedPageIndex(index)}
+            style={{ aspectRatio: "1400 / 2048" }}
           >
             <canvas
               ref={(el) => {
                 canvasRefs.current[index] = el;
               }}
+              style={{ width: "100%", height: "100%" }}
             />
           </div>
         ))}
