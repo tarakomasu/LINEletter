@@ -132,22 +132,22 @@ export default function EditorTest() {
   }, [status, session]);
 
   useEffect(() => {
-    const initLiff = async () => {
-      try {
-        const liffModule = (await import("@line/liff")).default;
-        await liffModule.init({
-          liffId: LIFF_ID,
-          withLoginOnExternalBrowser: true,
-        });
-        setLiff(liffModule);
-        console.log("LIFF initialized successfully");
-      } catch (error) {
-        console.error("LIFF initialization failed", error);
-      }
-    };
-    initLiff();
+    // Temporarily disabled to prevent login prompt on page load
+    // const initLiff = async () => {
+    //   try {
+    //     const liffModule = (await import("@line/liff")).default;
+    //     await liffModule.init({
+    //       liffId: LIFF_ID,
+    //       withLoginOnExternalBrowser: true,
+    //     });
+    //     setLiff(liffModule);
+    //     console.log("LIFF initialized successfully");
+    //   } catch (error) {
+    //     console.error("LIFF initialization failed", error);
+    //   }
+    // };
+    // initLiff();
   }, []);
-  // --- END LIFF ---
 
   // State for text properties
   const [fontSize, setFontSize] = useState<number>(40);
@@ -163,6 +163,32 @@ export default function EditorTest() {
   // State for sparkle effect
   const [sparkleDensity, setSparkleDensity] = useState(40);
   const [sparkleColor, setSparkleColor] = useState<string>("#FFFF00");
+
+  const updateAllCanvasSizes = () => {
+    fabricInstances.current.forEach((canvas) => {
+      if (canvas) {
+        const logicalWidth = 1400;
+        const logicalHeight = 2048;
+        const aspectRatio = logicalHeight / logicalWidth;
+        const displayHeight = window.innerHeight * 0.9;
+        const displayWidth = displayHeight / aspectRatio;
+
+        canvas.setDimensions(
+          { width: displayWidth, height: displayHeight },
+          { cssOnly: true }
+        );
+        canvas.calcOffset();
+        canvas.renderAll();
+      }
+    });
+  };
+
+  useEffect(() => {
+    window.addEventListener("resize", updateAllCanvasSizes);
+    return () => {
+      window.removeEventListener("resize", updateAllCanvasSizes);
+    };
+  }, []);
 
   useEffect(() => {
     setTemplatePapers([
@@ -183,32 +209,18 @@ export default function EditorTest() {
         img.onload = () => {
           const logicalWidth = 1400;
           const logicalHeight = 2048;
-          const aspectRatio = logicalHeight / logicalWidth;
 
-          // 1. Initialize a blank canvas
           const canvas = new fabric.Canvas(canvasEl);
+          fabricInstances.current[index] = canvas;
 
-          // 2. Set the internal resolution (backstore)
           canvas.setDimensions(
             { width: logicalWidth, height: logicalHeight },
             { backstoreOnly: true }
           );
 
-          // 3. Calculate the desired display size based on window height
-          const displayHeight = window.innerHeight * 0.9;
-          const displayWidth = displayHeight / aspectRatio;
-
-          // 4. Set the visual size (CSS)
-          canvas.setDimensions(
-            { width: displayWidth, height: displayHeight },
-            { cssOnly: true }
-          );
-
-          // 5. Recalculate offsets for correct mouse interaction
-          canvas.calcOffset();
+          updateAllCanvasSizes();
 
           canvas.selectionBorderColor = "black";
-          fabricInstances.current[index] = canvas;
           if (index === selectedPageIndex) {
             setActiveCanvas(canvas);
           }

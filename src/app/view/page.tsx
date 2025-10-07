@@ -27,6 +27,7 @@ function LetterViewer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  const fabricInstances = useRef<(fabric.Canvas | null)[]>([]);
 
   useEffect(() => {
     if (!letterId) {
@@ -67,33 +68,52 @@ function LetterViewer() {
     fetchImages();
   }, [letterId]);
 
+  const updateAllCanvasSizes = () => {
+    fabricInstances.current.forEach((canvas) => {
+      if (canvas) {
+        const logicalWidth = 1400;
+        const logicalHeight = 2048;
+        const aspectRatio = logicalHeight / logicalWidth;
+        const displayHeight = window.innerHeight * 0.9;
+        const displayWidth = displayHeight / aspectRatio;
+
+        canvas.setDimensions(
+          { width: displayWidth, height: displayHeight },
+          { cssOnly: true }
+        );
+        canvas.calcOffset();
+        canvas.renderAll();
+      }
+    });
+  };
+
+  useEffect(() => {
+    window.addEventListener("resize", updateAllCanvasSizes);
+    return () => {
+      window.removeEventListener("resize", updateAllCanvasSizes);
+    };
+  }, []);
+
   useEffect(() => {
     if (images.length === 0) return;
 
     images.forEach((image, index) => {
       const canvasEl = canvasRefs.current[index];
-      if (!canvasEl || !image.imageEffectsJson) return;
+      if (!canvasEl || !image.imageEffectsJson || fabricInstances.current[index])
+        return;
 
       const logicalWidth = 1400;
       const logicalHeight = 2048;
-      const aspectRatio = logicalHeight / logicalWidth;
 
       const canvas = new fabric.Canvas(canvasEl);
+      fabricInstances.current[index] = canvas;
 
       canvas.setDimensions(
         { width: logicalWidth, height: logicalHeight },
         { backstoreOnly: true }
       );
 
-      const displayHeight = window.innerHeight * 0.9;
-      const displayWidth = displayHeight / aspectRatio;
-
-      canvas.setDimensions(
-        { width: displayWidth, height: displayHeight },
-        { cssOnly: true }
-      );
-
-      canvas.calcOffset();
+      updateAllCanvasSizes();
 
       canvas.loadFromJSON(image.imageEffectsJson, () => {
         canvas.renderAll();
