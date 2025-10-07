@@ -165,22 +165,34 @@ export default function EditorTest() {
   const [sparkleColor, setSparkleColor] = useState<string>("#FFFF00");
 
   const updateAllCanvasSizes = () => {
-    fabricInstances.current.forEach((canvas) => {
-      if (canvas) {
-        const logicalWidth = 1400;
-        const logicalHeight = 2048;
-        const aspectRatio = logicalHeight / logicalWidth;
-        const displayHeight = window.innerHeight * 0.9;
-        const displayWidth = displayHeight / aspectRatio;
+    setTimeout(() => {
+      fabricInstances.current.forEach((canvas) => {
+        if (canvas) {
+          const logicalWidth = 1400;
+          const logicalHeight = 2048;
+          const aspectRatio = logicalHeight / logicalWidth;
+          const displayHeight = window.innerHeight * 0.9;
+          const displayWidth = displayHeight / aspectRatio;
 
-        canvas.setDimensions(
-          { width: displayWidth, height: displayHeight },
-          { cssOnly: true }
-        );
-        canvas.calcOffset();
-        canvas.renderAll();
-      }
-    });
+          // Set the CSS size of the <canvas> element
+          canvas.setDimensions(
+            { width: displayWidth, height: displayHeight },
+            { cssOnly: true }
+          );
+
+          // Also set the size of the wrapper element
+          const domCanvas = canvas.getElement();
+          const wrapperEl = domCanvas.parentElement;
+          if (wrapperEl) {
+            wrapperEl.style.width = `${displayWidth}px`;
+            wrapperEl.style.height = `${displayHeight}px`;
+          }
+
+          canvas.calcOffset();
+          canvas.renderAll();
+        }
+      });
+    }, 0);
   };
 
   useEffect(() => {
