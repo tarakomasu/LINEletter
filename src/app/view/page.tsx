@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import Image from "next/image";
-import { Suspense } from "react";
+import { fabric } from "fabric";
+import { resumeSparkleAnimation } from "@/lib/effects/sparkle";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -16,6 +17,7 @@ interface LetterImage {
   imageURL: string;
   pageNumber: number;
   createdAt: string;
+  imageEffectsJson: string | null;
 }
 
 function LetterViewer() {
@@ -24,6 +26,7 @@ function LetterViewer() {
   const [images, setImages] = useState<LetterImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
 
   useEffect(() => {
     if (!letterId) {
@@ -64,6 +67,40 @@ function LetterViewer() {
     fetchImages();
   }, [letterId]);
 
+  useEffect(() => {
+    if (images.length === 0) return;
+
+    images.forEach((image, index) => {
+      const canvasEl = canvasRefs.current[index];
+      // JSONがない、またはCanvas要素がまだ準備できていない場合は何もしない
+      if (!canvasEl || !image.imageEffectsJson) return;
+
+      const logicalWidth = 1400;
+      const logicalHeight = 2048;
+      const aspectRatio = logicalHeight / logicalWidth;
+
+      const displayHeight = window.innerHeight * 0.9;
+      const displayWidth = displayHeight / aspectRatio;
+
+      const canvas = new fabric.Canvas(canvasEl, {
+        width: logicalWidth,
+        height: logicalHeight,
+      });
+
+      canvas.setDimensions(
+        { width: displayWidth, height: displayHeight },
+        { cssOnly: true }
+      );
+
+      canvas.loadFromJSON(image.imageEffectsJson, () => {
+        canvas.renderAll();
+        canvas.getObjects().forEach((obj) => {
+          resumeSparkleAnimation(obj, canvas);
+        });
+      });
+    });
+  }, [images]);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -83,15 +120,28 @@ function LetterViewer() {
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-100 py-10">
       <div className="w-full max-w-4xl">
-        {images.map((image) => (
-          <div key={image.id} className="mb-8 shadow-lg">
+        {images.map((image, index) => (
+          <div
+            key={image.id}
+            className="relative mx-auto mb-8 shadow-lg"
+            style={{
+              width: "90vw",
+              maxWidth: `${(window.innerHeight * 0.9) / (2048 / 1400)}px`,
+              aspectRatio: "1400 / 2048",
+            }}
+          >
             <Image
               src={image.imageURL}
               alt={`手紙のページ ${image.pageNumber}`}
-              width={1400}
-              height={2048}
-              layout="responsive"
+              layout="fill"
+              objectFit="contain"
               priority={image.pageNumber === 1}
+            />
+            <canvas
+              ref={(el) => {
+                canvasRefs.current[index] = el;
+              }}
+              className="absolute top-0 left-0"
             />
           </div>
         ))}
