@@ -185,21 +185,27 @@ export default function EditorTest() {
           const logicalHeight = 2048;
           const aspectRatio = logicalHeight / logicalWidth;
 
-          // Calculate display dimensions based on window height
+          // 1. Initialize a blank canvas
+          const canvas = new fabric.Canvas(canvasEl);
+
+          // 2. Set the internal resolution (backstore)
+          canvas.setDimensions(
+            { width: logicalWidth, height: logicalHeight },
+            { backstoreOnly: true }
+          );
+
+          // 3. Calculate the desired display size based on window height
           const displayHeight = window.innerHeight * 0.9;
           const displayWidth = displayHeight / aspectRatio;
 
-          // Initialize canvas with fixed logical size
-          const canvas = new fabric.Canvas(canvasEl, {
-            width: logicalWidth,
-            height: logicalHeight,
-          });
-
-          // Set CSS dimensions for display, while keeping logical size intact
+          // 4. Set the visual size (CSS)
           canvas.setDimensions(
             { width: displayWidth, height: displayHeight },
             { cssOnly: true }
           );
+
+          // 5. Recalculate offsets for correct mouse interaction
+          canvas.calcOffset();
 
           canvas.selectionBorderColor = "black";
           fabricInstances.current[index] = canvas;
