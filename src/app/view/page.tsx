@@ -72,25 +72,28 @@ function LetterViewer() {
 
     images.forEach((image, index) => {
       const canvasEl = canvasRefs.current[index];
-      // JSONがない、またはCanvas要素がまだ準備できていない場合は何もしない
       if (!canvasEl || !image.imageEffectsJson) return;
 
       const logicalWidth = 1400;
       const logicalHeight = 2048;
       const aspectRatio = logicalHeight / logicalWidth;
 
+      const canvas = new fabric.Canvas(canvasEl);
+
+      canvas.setDimensions(
+        { width: logicalWidth, height: logicalHeight },
+        { backstoreOnly: true }
+      );
+
       const displayHeight = window.innerHeight * 0.9;
       const displayWidth = displayHeight / aspectRatio;
-
-      const canvas = new fabric.Canvas(canvasEl, {
-        width: logicalWidth,
-        height: logicalHeight,
-      });
 
       canvas.setDimensions(
         { width: displayWidth, height: displayHeight },
         { cssOnly: true }
       );
+
+      canvas.calcOffset();
 
       canvas.loadFromJSON(image.imageEffectsJson, () => {
         canvas.renderAll();
