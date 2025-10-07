@@ -183,11 +183,26 @@ export default function EditorTest() {
         img.onload = () => {
           const logicalWidth = 1400;
           const logicalHeight = 2048;
+          const aspectRatio = logicalHeight / logicalWidth;
 
+          // Calculate display dimensions based on the parent container
+          const parentEl = canvasEl.parentElement;
+          if (!parentEl) return;
+          const displayWidth = parentEl.offsetWidth;
+          const displayHeight = displayWidth * aspectRatio;
+
+          // Initialize canvas with fixed logical size
           const canvas = new fabric.Canvas(canvasEl, {
             width: logicalWidth,
             height: logicalHeight,
           });
+
+          // Set CSS dimensions for display, while keeping logical size intact
+          canvas.setDimensions(
+            { width: displayWidth, height: displayHeight },
+            { cssOnly: true }
+          );
+
           canvas.selectionBorderColor = "black";
           fabricInstances.current[index] = canvas;
           if (index === selectedPageIndex) {
@@ -821,19 +836,17 @@ export default function EditorTest() {
         {pages.map((page, index) => (
           <div
             key={page.id}
-            className={`mb-4 shadow-lg w-full max-w-2xl ${
+            className={`mb-4 shadow-lg ${
               selectedPageIndex === index
                 ? "border-4 border-blue-500 rounded-lg"
                 : "border-4 border-transparent"
             }`}
             onClick={() => setSelectedPageIndex(index)}
-            style={{ aspectRatio: "1400 / 2048" }}
           >
             <canvas
               ref={(el) => {
                 canvasRefs.current[index] = el;
               }}
-              style={{ width: "100%", height: "100%" }}
             />
           </div>
         ))}
