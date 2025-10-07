@@ -132,21 +132,20 @@ export default function EditorTest() {
   }, [status, session]);
 
   useEffect(() => {
-    // Temporarily disabled to prevent login prompt on page load
-    // const initLiff = async () => {
-    //   try {
-    //     const liffModule = (await import("@line/liff")).default;
-    //     await liffModule.init({
-    //       liffId: LIFF_ID,
-    //       withLoginOnExternalBrowser: true,
-    //     });
-    //     setLiff(liffModule);
-    //     console.log("LIFF initialized successfully");
-    //   } catch (error) {
-    //     console.error("LIFF initialization failed", error);
-    //   }
-    // };
-    // initLiff();
+    const initLiff = async () => {
+      try {
+        const liffModule = (await import("@line/liff")).default;
+        await liffModule.init({
+          liffId: LIFF_ID,
+          withLoginOnExternalBrowser: true,
+        });
+        setLiff(liffModule);
+        console.log("LIFF initialized successfully");
+      } catch (error) {
+        console.error("LIFF initialization failed", error);
+      }
+    };
+    initLiff();
   }, []);
 
   // State for text properties
@@ -180,8 +179,14 @@ export default function EditorTest() {
             { cssOnly: true }
           );
 
-          // Also set the size of the wrapper element
           const domCanvas = canvas.getElement();
+          domCanvas.style.width = `${displayWidth}px`;
+          domCanvas.style.height = `${displayHeight}px`;
+
+          const selectionCanvas = canvas.getSelectionElement();
+          selectionCanvas.style.width = `${displayWidth}px`;
+          selectionCanvas.style.height = `${displayHeight}px`;
+
           const wrapperEl = domCanvas.parentElement;
           if (wrapperEl) {
             wrapperEl.style.width = `${displayWidth}px`;
