@@ -185,11 +185,9 @@ export default function EditorTest() {
           const logicalHeight = 2048;
           const aspectRatio = logicalHeight / logicalWidth;
 
-          // Calculate display dimensions based on the parent container
-          const parentEl = canvasEl.parentElement;
-          if (!parentEl) return;
-          const displayWidth = parentEl.offsetWidth;
-          const displayHeight = displayWidth * aspectRatio;
+          // Calculate display dimensions based on window height
+          const displayHeight = window.innerHeight * 0.9;
+          const displayWidth = displayHeight / aspectRatio;
 
           // Initialize canvas with fixed logical size
           const canvas = new fabric.Canvas(canvasEl, {
