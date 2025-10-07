@@ -298,7 +298,7 @@ export default function EditorTest() {
         setFontSize(style.fontSize);
         setFontColor(style.fill);
         setFontFamily(style.fontFamily);
-      } else if (selectedObject.get("type") === "sparkle-effect") {
+      } else if ((selectedObject as any).effectType === "sparkle-effect") {
         const effectGroup = selectedObject as fabric.Group;
         setSparkleDensity(effectGroup.getObjects().length);
         // @ts-ignore
@@ -422,7 +422,7 @@ export default function EditorTest() {
 
     if (
       selectedObject &&
-      selectedObject.get("type") === "sparkle-effect" &&
+      (selectedObject as any).effectType === "sparkle-effect" &&
       activeCanvas
     ) {
       updateSparkleDensity(
@@ -440,7 +440,7 @@ export default function EditorTest() {
 
     if (
       selectedObject &&
-      selectedObject.get("type") === "sparkle-effect" &&
+      (selectedObject as any).effectType === "sparkle-effect" &&
       activeCanvas
     ) {
       updateSparkleColor(
@@ -515,6 +515,7 @@ export default function EditorTest() {
         // 2. Generate JSON for dynamic effects
         const customProperties = [
           "type",
+          "effectType",
           "effectColor",
           "initialWidth",
           "initialHeight",
@@ -836,7 +837,7 @@ export default function EditorTest() {
                 </div>
               </div>
             )}
-            {selectedObject.get("type") === "sparkle-effect" && (
+            {(selectedObject as any)?.effectType === "sparkle-effect" && (
               <div className="mt-4 flex flex-col gap-4">
                 <div className="flex items-center gap-2">
                   <label>キラキラの密度:</label>

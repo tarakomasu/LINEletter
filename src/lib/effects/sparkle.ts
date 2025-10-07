@@ -1,5 +1,74 @@
 import { fabric } from "fabric";
 
+type SparkleEffectGroup = fabric.Group & {
+  effectColor?: string;
+  initialWidth?: number;
+  initialHeight?: number;
+};
+
+type SparkleEffectOptions = fabric.IGroupOptions & {
+  effectColor?: string;
+  initialWidth?: number;
+  initialHeight?: number;
+};
+
+const ensureSparkleEffectClass = () => {
+  const fabricAny = fabric as any;
+
+  if (fabricAny.SparkleEffect) {
+    return fabricAny.SparkleEffect as typeof fabric.Group;
+  }
+
+  const SparkleEffect = fabric.util.createClass(fabric.Group, {
+    type: "sparkle-effect",
+    initialize(
+      this: SparkleEffectGroup,
+      objects: fabric.Object[],
+      options: SparkleEffectOptions = {}
+    ) {
+      const { effectColor, initialWidth, initialHeight, ...groupOptions } =
+        options;
+
+      (this as any).callSuper("initialize", objects, groupOptions);
+
+      if (effectColor !== undefined) {
+        this.set("effectColor", effectColor);
+      }
+      if (initialWidth !== undefined) {
+        this.set("initialWidth", initialWidth);
+      }
+      if (initialHeight !== undefined) {
+        this.set("initialHeight", initialHeight);
+      }
+    },
+    toObject(this: SparkleEffectGroup, propertiesToInclude?: string[]) {
+      return {
+        ...(this as any).callSuper("toObject", propertiesToInclude),
+        effectColor: this.effectColor,
+        initialWidth: this.initialWidth,
+        initialHeight: this.initialHeight,
+      };
+    },
+  });
+
+  (SparkleEffect as any).fromObject = (
+    object: any,
+    callback: (sparkleGroup: fabric.Object) => void
+  ) => {
+    const { objects, ...options } = object || {};
+            fabric.util.enlivenObjects(objects || [], (enlivenedObjects: any) => {
+              const sparkleGroup = new SparkleEffect(enlivenedObjects, options);
+              callback(sparkleGroup);
+            }, "");  };
+
+  fabricAny.SparkleEffect = SparkleEffect;
+
+  return SparkleEffect as typeof fabric.Group;
+};
+
+// Ensure the custom class is registered as soon as the module is loaded.
+ensureSparkleEffectClass();
+
 // Private function to animate a single sparkle particle
 const animateSparkle = (
   particle: fabric.Object,
@@ -33,6 +102,7 @@ const animateSparkle = (
 export const createSparkleEffect = (canvas: fabric.Canvas) => {
   if (!canvas) return;
 
+  const SparkleEffect = ensureSparkleEffectClass();
   const particles: fabric.Object[] = [];
   const particleCount = 40;
   const areaWidth = 300;
@@ -59,10 +129,10 @@ export const createSparkleEffect = (canvas: fabric.Canvas) => {
     left: canvas.getWidth() / 2 - areaWidth / 2,
     top: canvas.getHeight() / 2 - areaHeight / 2,
     // Custom properties
-    type: "sparkle-effect",
+    type: "group", // Use a standard type
     // @ts-ignore
+    effectType: "sparkle-effect", // Add a custom identifier
     effectColor: initialColor,
-    // @ts-ignore
     initialWidth: areaWidth,
     initialHeight: areaHeight,
     // Standard properties
@@ -92,10 +162,11 @@ export const updateSparkleDensity = (
 ) => {
   if (!group || !canvas) return;
 
+  const sparkleGroup = group as SparkleEffectGroup;
   const currentParticles = group.getObjects();
   const currentCount = currentParticles.length;
-  const areaWidth = (group as any).initialWidth ?? 300;
-  const areaHeight = (group as any).initialHeight ?? 300;
+  const areaWidth = sparkleGroup.initialWidth ?? 300;
+  const areaHeight = sparkleGroup.initialHeight ?? 300;
 
   if (newDensity > currentCount) {
     const newColorObj = new fabric.Color(sparkleColor);
@@ -135,7 +206,7 @@ export const updateSparkleColor = (
 ) => {
   if (!group || !canvas) return;
 
-  (group as any).effectColor = newColorHex;
+  (group as SparkleEffectGroup).effectColor = newColorHex;
 
   const newColorObj = new fabric.Color(newColorHex);
   newColorObj.setAlpha(0.8);
@@ -156,10 +227,10 @@ export const resumeSparkleAnimation = (
   obj: fabric.Object,
   canvas: fabric.Canvas
 ) => {
-  if ((obj as any).type === "sparkle-effect") {
-    const group = obj as fabric.Group;
-    const areaWidth = (group as any).initialWidth ?? group.width ?? 300;
-    const areaHeight = (group as any).initialHeight ?? group.height ?? 300;
+  if ((obj as any).effectType === "sparkle-effect") {
+    const group = obj as SparkleEffectGroup;
+    const areaWidth = group.initialWidth ?? group.width ?? 300;
+    const areaHeight = group.initialHeight ?? group.height ?? 300;
     group.getObjects().forEach((particle) => {
       animateSparkle(particle, canvas, areaWidth, areaHeight);
     });
