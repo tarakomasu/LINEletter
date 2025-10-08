@@ -114,39 +114,48 @@ function LetterViewer() {
 
     images.forEach((image, index) => {
       const canvasEl = canvasRefs.current[index];
-      if (!canvasEl || !image.imageEffectsJson) {
-        return;
-      }
+      if (!canvasEl || fabricInstances.current[index]) return;
 
-      if (fabricInstances.current[index]) {
-        fabricInstances.current[index]?.dispose();
-        fabricInstances.current[index] = null;
-      }
+      const logicalWidth = 1400;
+      const logicalHeight = 2048;
 
       const canvas = new fabric.Canvas(canvasEl);
       fabricInstances.current[index] = canvas;
 
       canvas.setDimensions(
-        { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
+        { width: logicalWidth, height: logicalHeight },
         { backstoreOnly: true }
       );
 
-      updateAllCanvasSizes();
+      // Set background image
+      fabric.Image.fromURL(
+        image.imageURL,
+        (bgImg) => {
+          if (bgImg.width && bgImg.height) {
+            canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas), {
+              scaleX: logicalWidth / bgImg.width,
+              scaleY: logicalHeight / bgImg.height,
+            });
+          } else {
+            canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas));
+          }
+        },
+        { crossOrigin: "anonymous" } // Add crossOrigin for images from another domain
+      );
 
-      canvas.loadFromJSON(image.imageEffectsJson, () => {
-        canvas.renderAll();
-        canvas.getObjects().forEach((obj) => {
-          resumeSparkleAnimation(obj, canvas);
+      // Load dynamic objects (effects)
+      if (image.imageEffectsJson) {
+        canvas.loadFromJSON(image.imageEffectsJson, () => {
+          canvas.renderAll();
+          canvas.getObjects().forEach((obj) => {
+            resumeSparkleAnimation(obj, canvas);
+          });
         });
-      });
-    });
+      }
 
-    return () => {
-      fabricInstances.current.forEach((canvas, idx) => {
-        canvas?.dispose();
-        fabricInstances.current[idx] = null;
-      });
-    };
+      // Set initial size and update on resize
+      updateAllCanvasSizes();
+    });
   }, [images]);
 
   if (loading) {
@@ -167,31 +176,13 @@ function LetterViewer() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-100 py-10">
-      <div className="w-full max-w-4xl">
+      <div className="w-full">
         {images.map((image, index) => (
-          <div
-            key={image.id}
-            className="relative mx-auto mb-8 shadow-lg"
-            style={{
-              width: `${Math.min(
-                displaySize.width,
-                window.innerWidth * 0.9
-              )}px`,
-              height: `${displaySize.height}px`,
-            }}
-          >
-            <Image
-              src={image.imageURL}
-              alt={`手紙のページ ${image.pageNumber}`}
-              layout="fill"
-              objectFit="contain"
-              priority={image.pageNumber === 1}
-            />
+          <div key={image.id} className="mx-auto mb-8 shadow-lg">
             <canvas
               ref={(el) => {
                 canvasRefs.current[index] = el;
               }}
-              className="absolute top-0 left-0"
             />
           </div>
         ))}
