@@ -115,9 +115,6 @@ function LetterViewer() {
           { backstoreOnly: true }
         );
 
-        const scale = displayWidth / LOGICAL_WIDTH;
-        canvasInstance.setViewportTransform([scale, 0, 0, scale, 0, 0]);
-
         canvasInstance.calcOffset();
         canvasInstance.requestRenderAll();
       });
