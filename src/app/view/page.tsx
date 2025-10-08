@@ -149,11 +149,14 @@ function LetterViewer() {
 
       canvas.loadFromJSON(image.imageEffectsJson, () => {
         canvas.renderAll();
-        canvas.getObjects().forEach((obj) => {
-          resumeSparkleAnimation(obj, canvas);
-        });
         // Ensure layout is stable before calculating size
         updateAllCanvasSizes();
+
+        requestAnimationFrame(() => {
+          canvas.getObjects().forEach((obj) => {
+            resumeSparkleAnimation(obj, canvas);
+          });
+        });
       });
     });
   }, [images]);
