@@ -7,10 +7,6 @@ import Image from "next/image";
 import { fabric } from "fabric";
 import { resumeSparkleAnimation } from "@/lib/effects/sparkle";
 
-const LOGICAL_WIDTH = 1400;
-const LOGICAL_HEIGHT = 2048;
-const LOGICAL_ASPECT_RATIO = LOGICAL_HEIGHT / LOGICAL_WIDTH;
-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -32,13 +28,6 @@ function LetterViewer() {
   const [error, setError] = useState<string | null>(null);
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
   const fabricInstances = useRef<(fabric.Canvas | null)[]>([]);
-  const [displaySize, setDisplaySize] = useState(() => {
-    if (typeof window === "undefined") {
-      return { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT };
-    }
-    const height = window.innerHeight * 0.9;
-    return { width: height / LOGICAL_ASPECT_RATIO, height };
-  });
 
   useEffect(() => {
     if (!letterId) {
@@ -81,19 +70,21 @@ function LetterViewer() {
 
   const updateAllCanvasSizes = () => {
     setTimeout(() => {
-      const height = window.innerHeight * 0.9;
-      const width = height / LOGICAL_ASPECT_RATIO;
-      setDisplaySize({ width, height });
-      fabricInstances.current.forEach((canvas) => {
+      fabricInstances.current.forEach((canvas, index) => {
         if (canvas) {
-          canvas.setDimensions({ width, height }, { cssOnly: true });
+          const containerEl = canvasRefs.current[index]?.parentElement;
+          if (!containerEl) return;
 
-          const domCanvas = canvas.getElement();
-          const wrapperEl = domCanvas.parentElement;
-          if (wrapperEl) {
-            wrapperEl.style.width = `${width}px`;
-            wrapperEl.style.height = `${height}px`;
-          }
+          const displayWidth = containerEl.offsetWidth;
+          const displayHeight = containerEl.offsetHeight;
+
+          containerEl.style.width = `${displayWidth}px`;
+          containerEl.style.height = `${displayHeight}px`;
+
+          canvas.setDimensions(
+            { width: displayWidth, height: displayHeight },
+            { cssOnly: true }
+          );
 
           canvas.calcOffset();
           canvas.renderAll();
@@ -114,47 +105,31 @@ function LetterViewer() {
 
     images.forEach((image, index) => {
       const canvasEl = canvasRefs.current[index];
-      if (!canvasEl || fabricInstances.current[index]) return;
+      if (
+        !canvasEl ||
+        fabricInstances.current[index] ||
+        !image.imageEffectsJson
+      ) {
+        return;
+      }
 
       const logicalWidth = 1400;
       const logicalHeight = 2048;
 
-      const canvas = new fabric.Canvas(canvasEl);
+      const canvas = new fabric.Canvas(canvasEl, {
+        width: logicalWidth,
+        height: logicalHeight,
+      });
       fabricInstances.current[index] = canvas;
 
-      canvas.setDimensions(
-        { width: logicalWidth, height: logicalHeight },
-        { backstoreOnly: true }
-      );
-
-      // Set background image
-      fabric.Image.fromURL(
-        image.imageURL,
-        (bgImg) => {
-          if (bgImg.width && bgImg.height) {
-            canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas), {
-              scaleX: logicalWidth / bgImg.width,
-              scaleY: logicalHeight / bgImg.height,
-            });
-          } else {
-            canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas));
-          }
-        },
-        { crossOrigin: "anonymous" } // Add crossOrigin for images from another domain
-      );
-
-      // Load dynamic objects (effects)
-      if (image.imageEffectsJson) {
-        canvas.loadFromJSON(image.imageEffectsJson, () => {
-          canvas.renderAll();
-          canvas.getObjects().forEach((obj) => {
-            resumeSparkleAnimation(obj, canvas);
-          });
+      canvas.loadFromJSON(image.imageEffectsJson, () => {
+        canvas.renderAll();
+        canvas.getObjects().forEach((obj) => {
+          resumeSparkleAnimation(obj, canvas);
         });
-      }
-
-      // Set initial size and update on resize
-      updateAllCanvasSizes();
+        // Ensure layout is stable before calculating size
+        updateAllCanvasSizes();
+      });
     });
   }, [images]);
 
@@ -176,13 +151,27 @@ function LetterViewer() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-100 py-10">
-      <div className="w-full">
+      <div className="w-full max-w-2xl">
         {images.map((image, index) => (
-          <div key={image.id} className="mx-auto mb-8 shadow-lg">
+          <div
+            key={image.id}
+            className="relative mx-auto mb-8 shadow-lg"
+            style={{
+              aspectRatio: "1400 / 2048",
+            }}
+          >
+            <Image
+              src={image.imageURL}
+              alt={`手紙のページ ${image.pageNumber}`}
+              layout="fill"
+              objectFit="contain"
+              priority={image.pageNumber === 1}
+            />
             <canvas
               ref={(el) => {
                 canvasRefs.current[index] = el;
               }}
+              className="absolute top-0 left-0"
             />
           </div>
         ))}
