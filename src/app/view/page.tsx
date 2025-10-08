@@ -11,6 +11,9 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+const LOGICAL_WIDTH = 1400;
+const LOGICAL_HEIGHT = 2048;
+
 interface LetterImage {
   id: number;
   letterId: string;
@@ -69,28 +72,39 @@ function LetterViewer() {
   }, [letterId]);
 
   const updateAllCanvasSizes = () => {
-    setTimeout(() => {
-      fabricInstances.current.forEach((canvas, index) => {
-        if (canvas) {
-          const containerEl = canvasRefs.current[index]?.parentElement;
-          if (!containerEl) return;
+    requestAnimationFrame(() => {
+      fabricInstances.current.forEach((canvasInstance, index) => {
+        const canvasEl = canvasRefs.current[index];
+        if (!canvasInstance || !canvasEl) return;
 
-          const displayWidth = containerEl.offsetWidth;
-          const displayHeight = containerEl.offsetHeight;
+        const wrapperEl = canvasEl.parentElement;
+        const outerContainerEl =
+          wrapperEl?.parentElement as HTMLDivElement | null;
+        if (!wrapperEl || !outerContainerEl) return;
 
-          containerEl.style.width = `${displayWidth}px`;
-          containerEl.style.height = `${displayHeight}px`;
+        const displayWidth = outerContainerEl.clientWidth;
+        const displayHeight =
+          outerContainerEl.clientHeight ||
+          Math.round((displayWidth * LOGICAL_HEIGHT) / LOGICAL_WIDTH);
 
-          canvas.setDimensions(
-            { width: displayWidth, height: displayHeight },
-            { cssOnly: true }
-          );
+        wrapperEl.style.width = `${displayWidth}px`;
+        wrapperEl.style.height = `${displayHeight}px`;
+        canvasEl.style.width = "100%";
+        canvasEl.style.height = "100%";
 
-          canvas.calcOffset();
-          canvas.renderAll();
-        }
+        canvasInstance.setDimensions(
+          { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
+          { backstoreOnly: true }
+        );
+        canvasInstance.setDimensions(
+          { width: displayWidth, height: displayHeight },
+          { cssOnly: true }
+        );
+
+        canvasInstance.calcOffset();
+        canvasInstance.renderAll();
       });
-    }, 0);
+    });
   };
 
   useEffect(() => {
@@ -113,12 +127,9 @@ function LetterViewer() {
         return;
       }
 
-      const logicalWidth = 1400;
-      const logicalHeight = 2048;
-
       const canvas = new fabric.Canvas(canvasEl, {
-        width: logicalWidth,
-        height: logicalHeight,
+        width: LOGICAL_WIDTH,
+        height: LOGICAL_HEIGHT,
       });
       fabricInstances.current[index] = canvas;
 
@@ -166,6 +177,7 @@ function LetterViewer() {
               layout="fill"
               objectFit="contain"
               priority={image.pageNumber === 1}
+              onLoadingComplete={updateAllCanvasSizes}
             />
             <canvas
               ref={(el) => {
