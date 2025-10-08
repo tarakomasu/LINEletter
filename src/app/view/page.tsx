@@ -3,9 +3,9 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
-import Image from "next/image";
 import { fabric } from "fabric";
 import { resumeSparkleAnimation } from "@/lib/effects/sparkle";
+import Image from "next/image";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -30,6 +30,7 @@ function LetterViewer() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  const containerRefs = useRef<(HTMLDivElement | null)[]>([]);
   const fabricInstances = useRef<(fabric.Canvas | null)[]>([]);
 
   useEffect(() => {
@@ -75,34 +76,50 @@ function LetterViewer() {
     requestAnimationFrame(() => {
       fabricInstances.current.forEach((canvasInstance, index) => {
         const canvasEl = canvasRefs.current[index];
-        if (!canvasInstance || !canvasEl) return;
+        const containerEl = containerRefs.current[index];
+        if (!canvasInstance || !canvasEl || !containerEl) return;
 
-        const wrapperEl = canvasEl.parentElement;
-        const outerContainerEl =
-          wrapperEl?.parentElement as HTMLDivElement | null;
-        if (!wrapperEl || !outerContainerEl) return;
+        const wrapperEl = canvasEl.parentElement as HTMLDivElement | null;
+        if (!wrapperEl) return;
 
-        const displayWidth = outerContainerEl.clientWidth;
-        const displayHeight =
-          outerContainerEl.clientHeight ||
-          Math.round((displayWidth * LOGICAL_HEIGHT) / LOGICAL_WIDTH);
+        const displayWidth = containerEl.clientWidth;
+        if (!displayWidth) return;
+
+        const displayHeight = Math.round(
+          (displayWidth * LOGICAL_HEIGHT) / LOGICAL_WIDTH
+        );
 
         wrapperEl.style.width = `${displayWidth}px`;
         wrapperEl.style.height = `${displayHeight}px`;
-        canvasEl.style.width = "100%";
-        canvasEl.style.height = "100%";
+        wrapperEl.style.position = "absolute";
+        wrapperEl.style.top = "0";
+        wrapperEl.style.left = "0";
+
+        const lowerCanvasEl = canvasInstance.getElement();
+        const upperCanvasEl = canvasInstance.getSelectionElement();
+
+        const canvasElements = [canvasEl, lowerCanvasEl, upperCanvasEl].filter(
+          (el): el is HTMLCanvasElement => Boolean(el)
+        );
+
+        canvasElements.forEach((el) => {
+          el.style.width = "100%";
+          el.style.height = "100%";
+          el.style.position = "absolute";
+          el.style.top = "0";
+          el.style.left = "0";
+        });
 
         canvasInstance.setDimensions(
           { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
           { backstoreOnly: true }
         );
-        canvasInstance.setDimensions(
-          { width: displayWidth, height: displayHeight },
-          { cssOnly: true }
-        );
+
+        const scale = displayWidth / LOGICAL_WIDTH;
+        canvasInstance.setViewportTransform([scale, 0, 0, scale, 0, 0]);
 
         canvasInstance.calcOffset();
-        canvasInstance.renderAll();
+        canvasInstance.requestRenderAll();
       });
     });
   };
@@ -144,6 +161,17 @@ function LetterViewer() {
     });
   }, [images]);
 
+  useEffect(() => {
+    return () => {
+      fabricInstances.current.forEach((canvas, index) => {
+        canvas?.dispose();
+        fabricInstances.current[index] = null;
+        canvasRefs.current[index] = null;
+        containerRefs.current[index] = null;
+      });
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -170,13 +198,18 @@ function LetterViewer() {
             style={{
               aspectRatio: "1400 / 2048",
             }}
+            ref={(el) => {
+              containerRefs.current[index] = el;
+            }}
           >
             <Image
               src={image.imageURL}
               alt={`手紙のページ ${image.pageNumber}`}
-              layout="fill"
-              objectFit="contain"
+              width={LOGICAL_WIDTH}
+              height={LOGICAL_HEIGHT}
               priority={image.pageNumber === 1}
+              sizes="(max-width: 768px) 100vw, 672px"
+              className="block w-full h-auto"
               onLoadingComplete={updateAllCanvasSizes}
             />
             <canvas
@@ -184,6 +217,7 @@ function LetterViewer() {
                 canvasRefs.current[index] = el;
               }}
               className="absolute top-0 left-0"
+              style={{ pointerEvents: "none" }}
             />
           </div>
         ))}
