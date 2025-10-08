@@ -7,6 +7,10 @@ import Image from "next/image";
 import { fabric } from "fabric";
 import { resumeSparkleAnimation } from "@/lib/effects/sparkle";
 
+const LOGICAL_WIDTH = 1400;
+const LOGICAL_HEIGHT = 2048;
+const LOGICAL_ASPECT_RATIO = LOGICAL_HEIGHT / LOGICAL_WIDTH;
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -28,6 +32,13 @@ function LetterViewer() {
   const [error, setError] = useState<string | null>(null);
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
   const fabricInstances = useRef<(fabric.Canvas | null)[]>([]);
+  const [displaySize, setDisplaySize] = useState(() => {
+    if (typeof window === "undefined") {
+      return { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT };
+    }
+    const height = window.innerHeight * 0.9;
+    return { width: height / LOGICAL_ASPECT_RATIO, height };
+  });
 
   useEffect(() => {
     if (!letterId) {
@@ -70,25 +81,18 @@ function LetterViewer() {
 
   const updateAllCanvasSizes = () => {
     setTimeout(() => {
+      const height = window.innerHeight * 0.9;
+      const width = height / LOGICAL_ASPECT_RATIO;
+      setDisplaySize({ width, height });
       fabricInstances.current.forEach((canvas) => {
         if (canvas) {
-          const logicalWidth = 1400;
-          const logicalHeight = 2048;
-          const aspectRatio = logicalHeight / logicalWidth;
-          const displayHeight = window.innerHeight * 0.9;
-          const displayWidth = displayHeight / aspectRatio;
-
-          // Set the CSS size of the <canvas> element
-          canvas.setDimensions(
-            { width: displayWidth, height: displayHeight },
-            { cssOnly: true }
-          );
+          canvas.setDimensions({ width, height }, { cssOnly: true });
 
           const domCanvas = canvas.getElement();
           const wrapperEl = domCanvas.parentElement;
           if (wrapperEl) {
-            wrapperEl.style.width = `${displayWidth}px`;
-            wrapperEl.style.height = `${displayHeight}px`;
+            wrapperEl.style.width = `${width}px`;
+            wrapperEl.style.height = `${height}px`;
           }
 
           canvas.calcOffset();
@@ -110,21 +114,20 @@ function LetterViewer() {
 
     images.forEach((image, index) => {
       const canvasEl = canvasRefs.current[index];
-      if (
-        !canvasEl ||
-        !image.imageEffectsJson ||
-        fabricInstances.current[index]
-      )
+      if (!canvasEl || !image.imageEffectsJson) {
         return;
+      }
 
-      const logicalWidth = 1400;
-      const logicalHeight = 2048;
+      if (fabricInstances.current[index]) {
+        fabricInstances.current[index]?.dispose();
+        fabricInstances.current[index] = null;
+      }
 
       const canvas = new fabric.Canvas(canvasEl);
       fabricInstances.current[index] = canvas;
 
       canvas.setDimensions(
-        { width: logicalWidth, height: logicalHeight },
+        { width: LOGICAL_WIDTH, height: LOGICAL_HEIGHT },
         { backstoreOnly: true }
       );
 
@@ -137,6 +140,13 @@ function LetterViewer() {
         });
       });
     });
+
+    return () => {
+      fabricInstances.current.forEach((canvas, idx) => {
+        canvas?.dispose();
+        fabricInstances.current[idx] = null;
+      });
+    };
   }, [images]);
 
   if (loading) {
@@ -163,9 +173,11 @@ function LetterViewer() {
             key={image.id}
             className="relative mx-auto mb-8 shadow-lg"
             style={{
-              width: "90vw",
-              maxWidth: `${(window.innerHeight * 0.9) / (2048 / 1400)}px`,
-              aspectRatio: "1400 / 2048",
+              width: `${Math.min(
+                displaySize.width,
+                window.innerWidth * 0.9
+              )}px`,
+              height: `${displaySize.height}px`,
             }}
           >
             <Image

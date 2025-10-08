@@ -19,6 +19,10 @@ import {
   updateSparkleColor,
 } from "@/lib/effects/sparkle";
 
+const isSparkleEffect = (
+  object: fabric.Object | null
+): object is fabric.Group => object?.type === "sparkle-effect";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -298,11 +302,12 @@ export default function EditorTest() {
         setFontSize(style.fontSize);
         setFontColor(style.fill);
         setFontFamily(style.fontFamily);
-      } else if ((selectedObject as any).effectType === "sparkle-effect") {
-        const effectGroup = selectedObject as fabric.Group;
+      } else if (isSparkleEffect(selectedObject)) {
+        const effectGroup = selectedObject;
         setSparkleDensity(effectGroup.getObjects().length);
-        // @ts-ignore
-        const currentColor = effectGroup.get("effectColor") || "#FFFF00";
+        const currentColor =
+          (effectGroup as fabric.Object & { effectColor?: string })
+            .effectColor || "#FFFF00";
         setSparkleColor(currentColor);
       }
     }
@@ -420,13 +425,9 @@ export default function EditorTest() {
     const newDensity = parseInt(e.target.value, 10);
     setSparkleDensity(newDensity);
 
-    if (
-      selectedObject &&
-      (selectedObject as any).effectType === "sparkle-effect" &&
-      activeCanvas
-    ) {
+    if (isSparkleEffect(selectedObject) && activeCanvas) {
       updateSparkleDensity(
-        selectedObject as fabric.Group,
+        selectedObject,
         activeCanvas,
         newDensity,
         sparkleColor
@@ -438,16 +439,8 @@ export default function EditorTest() {
     const newColorHex = e.target.value;
     setSparkleColor(newColorHex);
 
-    if (
-      selectedObject &&
-      (selectedObject as any).effectType === "sparkle-effect" &&
-      activeCanvas
-    ) {
-      updateSparkleColor(
-        selectedObject as fabric.Group,
-        activeCanvas,
-        newColorHex
-      );
+    if (isSparkleEffect(selectedObject) && activeCanvas) {
+      updateSparkleColor(selectedObject, activeCanvas, newColorHex);
     }
   };
 
@@ -498,31 +491,26 @@ export default function EditorTest() {
         // 1. Generate static image (excluding effects)
         const sparkleEffects = canvas
           .getObjects()
-          .filter((obj) => (obj as any).type === "sparkle-effect");
+          .filter((obj) => obj.type === "sparkle-effect");
+
         sparkleEffects.forEach((effect) => effect.set("visible", false));
 
-        const targetWidth = 1400;
-        const displayWidth = canvas.getWidth();
-        const multiplier = targetWidth / displayWidth;
-        const dataUrl = canvas.toDataURL({
-          format: "png",
-          quality: 1,
-          multiplier,
-        });
-
-        sparkleEffects.forEach((effect) => effect.set("visible", true));
+        let dataUrl: string;
+        try {
+          const targetWidth = 1400;
+          const displayWidth = canvas.getWidth();
+          const multiplier = targetWidth / displayWidth;
+          dataUrl = canvas.toDataURL({
+            format: "png",
+            quality: 1,
+            multiplier,
+          });
+        } finally {
+          sparkleEffects.forEach((effect) => effect.set("visible", true));
+        }
 
         // 2. Generate JSON for dynamic effects
-        const customProperties = [
-          "type",
-          "effectType",
-          "effectColor",
-          "initialWidth",
-          "initialHeight",
-        ];
-        const dynamicObjectsJSON = sparkleEffects.map((obj) =>
-          obj.toJSON(customProperties)
-        );
+        const dynamicObjectsJSON = sparkleEffects.map((obj) => obj.toJSON());
         const dynamicLayerJSON = JSON.stringify({
           version: fabric.version,
           objects: dynamicObjectsJSON,
@@ -837,7 +825,7 @@ export default function EditorTest() {
                 </div>
               </div>
             )}
-            {(selectedObject as any)?.effectType === "sparkle-effect" && (
+            {isSparkleEffect(selectedObject) && (
               <div className="mt-4 flex flex-col gap-4">
                 <div className="flex items-center gap-2">
                   <label>キラキラの密度:</label>

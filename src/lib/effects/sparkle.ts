@@ -6,6 +6,11 @@ type SparkleEffectGroup = fabric.Group & {
   initialHeight?: number;
 };
 
+type SparkleParticle = fabric.Circle & {
+  __sparkleStop?: boolean;
+  __sparkleTimeoutId?: number;
+};
+
 type SparkleEffectOptions = fabric.IGroupOptions & {
   effectColor?: string;
   initialWidth?: number;
@@ -56,10 +61,15 @@ const ensureSparkleEffectClass = () => {
     callback: (sparkleGroup: fabric.Object) => void
   ) => {
     const { objects, ...options } = object || {};
-            fabric.util.enlivenObjects(objects || [], (enlivenedObjects: any) => {
-              const sparkleGroup = new SparkleEffect(enlivenedObjects, options);
-              callback(sparkleGroup);
-            }, "");  };
+    fabric.util.enlivenObjects(
+      objects || [],
+      (enlivenedObjects: any) => {
+        const sparkleGroup = new SparkleEffect(enlivenedObjects, options);
+        callback(sparkleGroup);
+      },
+      ""
+    );
+  };
 
   fabricAny.SparkleEffect = SparkleEffect;
 
@@ -71,28 +81,64 @@ ensureSparkleEffectClass();
 
 // Private function to animate a single sparkle particle
 const animateSparkle = (
-  particle: fabric.Object,
+  particle: SparkleParticle,
   canvas: fabric.Canvas,
   areaWidth: number,
   areaHeight: number
 ) => {
-  const duration = Math.random() * 1000 + 500;
-  const delay = Math.random() * 500;
+  particle.__sparkleStop = false;
 
-  setTimeout(() => {
-    particle.animate("opacity", 0, {
-      duration,
-      onChange: canvas.renderAll.bind(canvas),
-      onComplete: () => {
-        particle.set({
-          left: Math.random() * areaWidth,
-          top: Math.random() * areaHeight,
-          opacity: 1,
-        });
-        animateSparkle(particle, canvas, areaWidth, areaHeight);
-      },
-    });
-  }, delay);
+  const loop = () => {
+    if (particle.__sparkleStop) {
+      return;
+    }
+
+    const duration = Math.random() * 1000 + 500;
+    const delay = Math.random() * 500;
+
+    particle.__sparkleTimeoutId = window.setTimeout(() => {
+      if (particle.__sparkleStop) {
+        return;
+      }
+
+      fabric.util.animate({
+        startValue: 1,
+        endValue: 0,
+        duration,
+        onChange: (value: number) => {
+          if (particle.__sparkleStop) {
+            return;
+          }
+          particle.set("opacity", value);
+          canvas.requestRenderAll();
+        },
+        onComplete: () => {
+          if (particle.__sparkleStop) {
+            return;
+          }
+
+          particle.set({
+            left: Math.random() * areaWidth,
+            top: Math.random() * areaHeight,
+            opacity: 1,
+          });
+
+          loop();
+        },
+      });
+    }, delay);
+  };
+
+  loop();
+};
+
+const stopSparkleAnimation = (particle: fabric.Object) => {
+  const sparkleParticle = particle as SparkleParticle;
+  sparkleParticle.__sparkleStop = true;
+  if (sparkleParticle.__sparkleTimeoutId !== undefined) {
+    window.clearTimeout(sparkleParticle.__sparkleTimeoutId);
+    sparkleParticle.__sparkleTimeoutId = undefined;
+  }
 };
 
 /**
@@ -122,28 +168,23 @@ export const createSparkleEffect = (canvas: fabric.Canvas) => {
       evented: false,
     });
     particles.push(particle);
-    animateSparkle(particle, canvas, areaWidth, areaHeight);
+    animateSparkle(particle as SparkleParticle, canvas, areaWidth, areaHeight);
   }
 
-  const group = new fabric.Group(particles, {
+  const sparkleGroup = new (SparkleEffect as any)(particles, {
     left: canvas.getWidth() / 2 - areaWidth / 2,
     top: canvas.getHeight() / 2 - areaHeight / 2,
-    // Custom properties
-    type: "group", // Use a standard type
-    // @ts-ignore
-    effectType: "sparkle-effect", // Add a custom identifier
     effectColor: initialColor,
     initialWidth: areaWidth,
     initialHeight: areaHeight,
-    // Standard properties
     selectable: true,
     evented: true,
     hasControls: true,
     hasBorders: true,
   });
 
-  canvas.add(group);
-  canvas.setActiveObject(group);
+  canvas.add(sparkleGroup);
+  canvas.setActiveObject(sparkleGroup);
   canvas.renderAll();
 };
 
@@ -182,11 +223,18 @@ export const updateSparkleDensity = (
         evented: false,
       });
       group.add(particle);
-      animateSparkle(particle, canvas, areaWidth, areaHeight);
+      animateSparkle(
+        particle as SparkleParticle,
+        canvas,
+        areaWidth,
+        areaHeight
+      );
     }
   } else if (newDensity < currentCount) {
     for (let i = 0; i < currentCount - newDensity; i++) {
-      group.remove(currentParticles[currentParticles.length - 1 - i]);
+      const particle = currentParticles[currentParticles.length - 1 - i];
+      stopSparkleAnimation(particle);
+      group.remove(particle);
     }
   }
   group.setCoords();
@@ -227,12 +275,18 @@ export const resumeSparkleAnimation = (
   obj: fabric.Object,
   canvas: fabric.Canvas
 ) => {
-  if ((obj as any).effectType === "sparkle-effect") {
+  if (obj.type === "sparkle-effect") {
     const group = obj as SparkleEffectGroup;
     const areaWidth = group.initialWidth ?? group.width ?? 300;
     const areaHeight = group.initialHeight ?? group.height ?? 300;
     group.getObjects().forEach((particle) => {
-      animateSparkle(particle, canvas, areaWidth, areaHeight);
+      stopSparkleAnimation(particle);
+      animateSparkle(
+        particle as SparkleParticle,
+        canvas,
+        areaWidth,
+        areaHeight
+      );
     });
   }
 };
