@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signIn } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import Image from "next/image";
 
 export function Header() {
@@ -23,8 +23,11 @@ export function Header() {
           {status === "loading" ? (
             <div className="h-[50px]"></div> // Placeholder to prevent layout shift
           ) : session ? (
-            <div className="flex items-center space-x-2">
-              <span className="text-base font-bold">{session.user?.name}</span>
+            <button
+              onClick={() => signOut()}
+              className="flex items-center space-x-2 hover:opacity-80 transition-opacity rounded-full p-1"
+            >
+              <span className="text-base font-bold hidden sm:inline">{session.user?.name}</span>
               {session.user?.image && (
                 <Image
                   className="rounded-full w-[40px] h-[40px] md:w-[50px] md:h-[50px]"
@@ -34,7 +37,7 @@ export function Header() {
                   height={50}
                 />
               )}
-            </div>
+            </button>
           ) : (
             <button
               onClick={() => signIn("line")}
