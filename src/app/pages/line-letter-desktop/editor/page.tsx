@@ -113,7 +113,7 @@ const SparkleIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export default function EditorTest() {
   const { data: session, status } = useSession();
   const [pages, setPages] = useState<Page[]>([
-    { id: `page-${Date.now()}`, background: "/template-papers/sea.png" },
+    { id: `page-${Date.now()}`, background: "/template-papers/simple-laef.png" },
   ]);
   const [selectedPageIndex, setSelectedPageIndex] = useState<number>(0);
   const fabricInstances = useRef<(fabric.Canvas | null)[]>([]);
@@ -256,6 +256,21 @@ export default function EditorTest() {
               canvas.setBackgroundImage(bgImg, canvas.renderAll.bind(canvas));
             }
           });
+
+          // Add initial text only to the first page
+          if (index === 0 && canvas.getObjects().length === 0) {
+            const text = new fabric.IText("テキストを入力してください", {
+              left: canvas.getWidth() / 2,
+              top: canvas.getHeight() / 2,
+              fontSize: 60,
+              fill: "#333333",
+              fontFamily: "'Hiragino Kaku Gothic ProN', sans-serif",
+              originX: "center",
+              originY: "center",
+            });
+            canvas.add(text);
+            canvas.setActiveObject(text);
+          }
 
           const handleSelection = (e: fabric.IEvent) => {
             const selection = e.selected?.[0] ?? null;
