@@ -10,10 +10,11 @@ interface TemplatePickerModalProps {
 }
 
 // カテゴリの種類
-type CategoryType = "theme" | "mood" | "season";
+type CategoryType = "none" | "theme" | "mood" | "season";
 
 // カテゴリ種類の定義
 const categoryTypes = [
+  { value: "none", label: "カテゴリ種類を選択しない" },
   { value: "theme", label: "テーマごと" },
   { value: "mood", label: "雰囲気ごと" },
   { value: "season", label: "季節ごと" },
@@ -93,9 +94,8 @@ const TemplatePickerModal = ({
   templates,
 }: TemplatePickerModalProps) => {
   const [selectedCategoryType, setSelectedCategoryType] =
-    useState<CategoryType>("theme");
-  const [selectedCategoryId, setSelectedCategoryId] =
-    useState<string>("nature");
+    useState<CategoryType>("none");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
   if (!isOpen) {
     return null;
@@ -103,6 +103,9 @@ const TemplatePickerModal = ({
 
   // 選択されたカテゴリに応じたテンプレートを取得
   const getFilteredTemplates = () => {
+    if (selectedCategoryType === "none") {
+      return templates;
+    }
     const categories = categoryData[selectedCategoryType];
     const selectedCategory = categories.find(
       (cat) => cat.id === selectedCategoryId
@@ -114,7 +117,7 @@ const TemplatePickerModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-10 backdrop-blur-sm z-50 flex justify-center items-center"
+      className="fixed inset-0 bg-black bg-opacity-25 backdrop-blur-sm z-50 flex justify-center items-center"
       onClick={onClose}
     >
       <div
@@ -131,12 +134,16 @@ const TemplatePickerModal = ({
           <select
             value={selectedCategoryType}
             onChange={(e) => {
-              setSelectedCategoryType(e.target.value as CategoryType);
+              const newCategoryType = e.target.value as CategoryType;
+              setSelectedCategoryType(newCategoryType);
               // カテゴリ種類が変わったら、最初のカテゴリを選択
-              const newCategories =
-                categoryData[e.target.value as CategoryType];
-              if (newCategories.length > 0) {
-                setSelectedCategoryId(newCategories[0].id);
+              if (newCategoryType === "none") {
+                setSelectedCategoryId("");
+              } else {
+                const newCategories = categoryData[newCategoryType];
+                if (newCategories.length > 0) {
+                  setSelectedCategoryId(newCategories[0].id);
+                }
               }
             }}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -150,26 +157,28 @@ const TemplatePickerModal = ({
         </div>
 
         {/* カテゴリチップ */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            カテゴリ
-          </label>
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {categoryData[selectedCategoryType].map((category) => (
-              <button
-                key={category.id}
-                onClick={() => setSelectedCategoryId(category.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                  selectedCategoryId === category.id
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                {category.label}
-              </button>
-            ))}
+        {selectedCategoryType !== "none" && (
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              カテゴリ
+            </label>
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {categoryData[selectedCategoryType].map((category) => (
+                <button
+                  key={category.id}
+                  onClick={() => setSelectedCategoryId(category.id)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                    selectedCategoryId === category.id
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  {category.label}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto p-2">
           {filteredTemplates.map((template, index) => (
             <div
