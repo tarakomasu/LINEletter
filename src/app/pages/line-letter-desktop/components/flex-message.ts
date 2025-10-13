@@ -12,7 +12,7 @@ export const createFlexMessage = (envelopeUrl: string, viewUrl: string) => {
       type: "bubble" as const,
       hero: {
         type: "image" as const,
-        url: imageUrl,
+        url: envelopeUrl,
         size: "full",
         aspectRatio: "20:13",
         aspectMode: "cover" as const,
