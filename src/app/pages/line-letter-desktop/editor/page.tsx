@@ -13,6 +13,8 @@ import {
 } from "../components/icons";
 import Tooltip from "../components/Tooltip";
 import TemplatePickerModal from "../components/TemplatePickerModal";
+import EnvelopePickerModal from "../components/EnvelopePickerModal";
+import { createFlexMessage } from "../components/flex-message";
 import {
   createSparkleEffect,
   updateSparkleDensity,
@@ -110,10 +112,18 @@ const SparkleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const availableEnvelopes = [
+  "/flex-message-envelope/simple.jpg",
+  "/flex-message-envelope/red-rose.png",
+];
+
 export default function EditorTest() {
   const { data: session, status } = useSession();
   const [pages, setPages] = useState<Page[]>([
-    { id: `page-${Date.now()}`, background: "/template-papers/simple-laef.png" },
+    {
+      id: `page-${Date.now()}`,
+      background: "/template-papers/simple-laef.png",
+    },
   ]);
   const [selectedPageIndex, setSelectedPageIndex] = useState<number>(0);
   const fabricInstances = useRef<(fabric.Canvas | null)[]>([]);
@@ -123,6 +133,10 @@ export default function EditorTest() {
   );
   const [activeCanvas, setActiveCanvas] = useState<fabric.Canvas | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEnvelopeModalOpen, setIsEnvelopeModalOpen] = useState(false);
+  const [selectedEnvelope, setSelectedEnvelope] = useState<string>(
+    availableEnvelopes[0]
+  );
   const [templatePapers, setTemplatePapers] = useState<string[]>([]);
   const [liff, setLiff] = useState<Liff | null>(null);
   const [isSharing, setIsSharing] = useState(false);
@@ -598,9 +612,11 @@ export default function EditorTest() {
 
       // 5. Share via LIFF
       const shareUrl = `${window.location.origin}/view?letterId=${letterId}`;
-      const messages = createLiffMessage(shareUrl);
+      const envelopeUrl = `${window.location.origin}${selectedEnvelope}`;
 
-      const result = await liff.shareTargetPicker(messages as any);
+      const flexMessage = createFlexMessage(envelopeUrl, shareUrl);
+
+      const result = await liff.shareTargetPicker([flexMessage] as any);
       if (result) {
         alert("LINEでの共有が完了しました！");
       } else {
@@ -686,6 +702,15 @@ export default function EditorTest() {
         onSelectTemplate={handleSelectTemplate}
         templates={templatePapers}
       />
+      <EnvelopePickerModal
+        isOpen={isEnvelopeModalOpen}
+        onClose={() => setIsEnvelopeModalOpen(false)}
+        onSelectEnvelope={(envelope) => {
+          setSelectedEnvelope(envelope);
+          setIsEnvelopeModalOpen(false);
+        }}
+        envelopes={availableEnvelopes}
+      />
       <div className="w-80 bg-white shadow-md p-4 sticky top-0 h-screen overflow-y-auto">
         <h3 className="text-xl font-bold mb-4">コントロール</h3>
         <div className="flex flex-col gap-4">
@@ -737,6 +762,54 @@ export default function EditorTest() {
             <Tooltip content="キラキラするエフェクトを追加します。">
               <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
             </Tooltip>
+          </div>
+
+          <div className="pt-4 border-t">
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                className={buttonStyle}
+                onClick={() => setIsEnvelopeModalOpen(true)}
+              >
+                <span>封筒を選ぶ</span>
+              </button>
+              <Tooltip content="LINEで送る際のプレビュー画像（封筒）を選びます。">
+                <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+              </Tooltip>
+            </div>
+            {selectedEnvelope && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-1">選択中の封筒:</p>
+                <img
+                  src={selectedEnvelope}
+                  alt="Selected Envelope"
+                  className="rounded-md border w-full"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 border-t">
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                className={buttonStyle}
+                onClick={() => setIsEnvelopeModalOpen(true)}
+              >
+                <span>封筒を選ぶ</span>
+              </button>
+              <Tooltip content="LINEで送る際のプレビュー画像（封筒）を選びます。">
+                <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+              </Tooltip>
+            </div>
+            {selectedEnvelope && (
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-1">選択中の封筒:</p>
+                <img
+                  src={selectedEnvelope}
+                  alt="Selected Envelope"
+                  className="rounded-md border w-full"
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
