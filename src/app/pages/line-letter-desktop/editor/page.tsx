@@ -374,9 +374,9 @@ export default function EditorTest() {
 
     if (
       window.confirm(
-        `ページ ${
+        `ページ ${(
           selectedPageIndex + 1
-        } を削除しますか？この操作は元に戻せません。`
+        )} を削除しますか？この操作は元に戻せません。`
       )
     ) {
       const canvasToDispose = fabricInstances.current[selectedPageIndex];
@@ -473,7 +473,7 @@ export default function EditorTest() {
     }
   };
 
-  const handleShare = async () => {
+  const handleShare = async (selectedEnvelopePath: string) => {
     if (!liff) {
       alert(
         "LIFFの初期化が完了していません。しばらく待ってから再度お試しください。"
@@ -612,7 +612,7 @@ export default function EditorTest() {
 
       // 5. Share via LIFF
       const shareUrl = `${window.location.origin}/view?letterId=${letterId}`;
-      const envelopeUrl = `${window.location.origin}${selectedEnvelope}`;
+      const envelopeUrl = `${window.location.origin}${selectedEnvelopePath}`;
 
       const flexMessage = createFlexMessage(envelopeUrl, shareUrl);
 
@@ -632,6 +632,10 @@ export default function EditorTest() {
     } finally {
       setIsSharing(false);
     }
+  };
+
+  const promptEnvelopeAndShare = () => {
+    setIsEnvelopeModalOpen(true);
   };
   // --- END LIFF ---
 
@@ -705,9 +709,10 @@ export default function EditorTest() {
       <EnvelopePickerModal
         isOpen={isEnvelopeModalOpen}
         onClose={() => setIsEnvelopeModalOpen(false)}
-        onSelectEnvelope={(envelope) => {
-          setSelectedEnvelope(envelope);
+        onSelectEnvelope={async (envelope) => {
           setIsEnvelopeModalOpen(false);
+          // TODO: Add animation here in the future
+          await handleShare(envelope);
         }}
         envelopes={availableEnvelopes}
       />
@@ -764,58 +769,10 @@ export default function EditorTest() {
             </Tooltip>
           </div>
 
-          <div className="pt-4 border-t">
-            <div className="flex items-center gap-2 mb-4">
-              <button
-                className={buttonStyle}
-                onClick={() => setIsEnvelopeModalOpen(true)}
-              >
-                <span>封筒を選ぶ</span>
-              </button>
-              <Tooltip content="LINEで送る際のプレビュー画像（封筒）を選びます。">
-                <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
-              </Tooltip>
-            </div>
-            {selectedEnvelope && (
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-1">選択中の封筒:</p>
-                <img
-                  src={selectedEnvelope}
-                  alt="Selected Envelope"
-                  className="rounded-md border w-full"
-                />
-              </div>
-            )}
-          </div>
-
-          <div className="pt-4 border-t">
-            <div className="flex items-center gap-2 mb-4">
-              <button
-                className={buttonStyle}
-                onClick={() => setIsEnvelopeModalOpen(true)}
-              >
-                <span>封筒を選ぶ</span>
-              </button>
-              <Tooltip content="LINEで送る際のプレビュー画像（封筒）を選びます。">
-                <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
-              </Tooltip>
-            </div>
-            {selectedEnvelope && (
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 mb-1">選択中の封筒:</p>
-                <img
-                  src={selectedEnvelope}
-                  alt="Selected Envelope"
-                  className="rounded-md border w-full"
-                />
-              </div>
-            )}
-          </div>
-
           <div className="flex items-center gap-2">
             <button
               className={isSharing ? disabledButtonStyle : buttonStyle}
-              onClick={handleShare}
+              onClick={promptEnvelopeAndShare}
               disabled={isSharing}
             >
               {isSharing ? "送信準備中..." : "LINEで送信"}
