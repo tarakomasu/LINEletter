@@ -128,6 +128,7 @@ export default function EditorTest() {
   const [selectedPageIndex, setSelectedPageIndex] = useState<number>(0);
   const fabricInstances = useRef<(fabric.Canvas | null)[]>([]);
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
+  const clipboardRef = useRef<fabric.Object | null>(null);
   const [selectedObject, setSelectedObject] = useState<fabric.Object | null>(
     null
   );
@@ -349,6 +350,98 @@ export default function EditorTest() {
     };
   }, []);
 
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      const element = target as HTMLElement | null;
+      if (!element) return false;
+      const tagName = element.tagName;
+      if (
+        tagName === "INPUT" ||
+        tagName === "TEXTAREA" ||
+        element.isContentEditable
+      ) {
+        return true;
+      }
+      if (element.closest("input, textarea, [contenteditable='true']")) {
+        return true;
+      }
+      return false;
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!activeCanvas) return;
+      if (event.defaultPrevented) return;
+      if (isEditableTarget(event.target)) return;
+
+      const key = event.key.toLowerCase();
+
+      if (key === "delete" || key === "backspace") {
+        const activeObjects = activeCanvas.getActiveObjects();
+        if (!activeObjects.length) return;
+        event.preventDefault();
+        activeObjects.forEach((obj) => {
+          activeCanvas.remove(obj);
+        });
+        activeCanvas.discardActiveObject();
+        setSelectedObject(null);
+        activeCanvas.requestRenderAll();
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && key === "c") {
+        const activeObject = activeCanvas.getActiveObject();
+        if (!activeObject) return;
+        event.preventDefault();
+        activeObject.clone((cloned: fabric.Object) => {
+          clipboardRef.current = cloned;
+          if (cloned && cloned.type === "activeSelection") {
+            (cloned as fabric.ActiveSelection).canvas = activeCanvas;
+          }
+        });
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && key === "v") {
+        const clipboard = clipboardRef.current;
+        if (!clipboard) return;
+        event.preventDefault();
+        clipboard.clone((clonedObj: fabric.Object) => {
+          if (!clonedObj) return;
+          activeCanvas.discardActiveObject();
+
+          const left = (clonedObj.left ?? 0) + 20;
+          const top = (clonedObj.top ?? 0) + 20;
+
+          clonedObj.set({
+            left,
+            top,
+            evented: true,
+          });
+
+          if (clonedObj.type === "activeSelection") {
+            (clonedObj as fabric.ActiveSelection).canvas = activeCanvas;
+            (clonedObj as fabric.ActiveSelection).forEachObject((obj) => {
+              activeCanvas.add(obj);
+            });
+            (clonedObj as fabric.ActiveSelection).setCoords();
+          } else {
+            activeCanvas.add(clonedObj);
+          }
+
+          clipboardRef.current = clonedObj;
+          activeCanvas.setActiveObject(clonedObj);
+          setSelectedObject(clonedObj);
+          activeCanvas.requestRenderAll();
+        });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeCanvas, setSelectedObject]);
+
   const addPage = () => {
     setIsModalOpen(true);
   };
@@ -374,9 +467,9 @@ export default function EditorTest() {
 
     if (
       window.confirm(
-        `ページ ${(
+        `ページ ${
           selectedPageIndex + 1
-        )} を削除しますか？この操作は元に戻せません。`
+        } を削除しますか？この操作は元に戻せません。`
       )
     ) {
       const canvasToDispose = fabricInstances.current[selectedPageIndex];
