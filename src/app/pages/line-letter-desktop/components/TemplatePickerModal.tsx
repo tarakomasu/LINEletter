@@ -106,10 +106,6 @@ const TemplatePickerModal = ({
     }
   }, [isOpen]);
 
-  if (!isOpen) {
-    return null;
-  }
-
   // 選択されたカテゴリに応じたテンプレートを取得
   const filteredTemplates = useMemo(() => {
     if (selectedCategoryType === "none") {
@@ -121,6 +117,10 @@ const TemplatePickerModal = ({
     );
     return selectedCategory ? selectedCategory.templates : templates;
   }, [selectedCategoryId, selectedCategoryType, templates]);
+
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div
