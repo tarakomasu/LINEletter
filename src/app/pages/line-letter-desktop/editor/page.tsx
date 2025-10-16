@@ -373,10 +373,21 @@ export default function EditorTest() {
       if (event.defaultPrevented) return;
       if (isEditableTarget(event.target)) return;
 
+      const activeObjects = activeCanvas.getActiveObjects();
+      const activeObject = activeCanvas.getActiveObject();
+      const hasSparkleEffectSelected = activeObjects.some((obj) =>
+        isSparkleEffect(obj)
+      );
+      if (
+        hasSparkleEffectSelected ||
+        (!!activeObject && isSparkleEffect(activeObject))
+      ) {
+        return;
+      }
+
       const key = event.key.toLowerCase();
 
       if (key === "delete" || key === "backspace") {
-        const activeObjects = activeCanvas.getActiveObjects();
         if (!activeObjects.length) return;
         event.preventDefault();
         activeObjects.forEach((obj) => {
@@ -389,7 +400,6 @@ export default function EditorTest() {
       }
 
       if ((event.metaKey || event.ctrlKey) && key === "c") {
-        const activeObject = activeCanvas.getActiveObject();
         if (!activeObject) return;
         event.preventDefault();
         activeObject.clone((cloned: fabric.Object) => {
