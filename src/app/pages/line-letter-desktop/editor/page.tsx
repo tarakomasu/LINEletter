@@ -20,10 +20,22 @@ import {
   updateSparkleDensity,
   updateSparkleColor,
 } from "@/lib/effects/sparkle";
+import {
+  createMonochromeIlluminationEffect,
+  createRainbowIlluminationEffect,
+  updateIlluminationBulbCount,
+  updateIlluminationBlinkSpeed,
+  updateIlluminationColor,
+} from "@/lib/effects/illumination";
 
 const isSparkleEffect = (
   object: fabric.Object | null
 ): object is fabric.Group => object?.type === "sparkle-effect";
+
+const isIlluminationEffect = (
+  object: fabric.Object | null
+): object is fabric.Group & { effectType?: string } =>
+  object?.type === "illumination-effect";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -112,6 +124,26 @@ const SparkleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const BulbIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    {...props}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M9 18H15" />
+    <path d="M10 22h4" />
+    <path d="M12 14v4" />
+    <path d="M8.5 10.5C8.5 7.46 10.46 5 12 5s3.5 2.46 3.5 5.5" />
+  </svg>
+);
+
 const availableEnvelopes = [
   "/flex-message-envelope/simple.jpg",
   "/flex-message-envelope/red-rose.png",
@@ -181,6 +213,11 @@ export default function EditorTest() {
   // State for sparkle effect
   const [sparkleDensity, setSparkleDensity] = useState(40);
   const [sparkleColor, setSparkleColor] = useState<string>("#FFFF00");
+
+  // State for illumination effect
+  const [illuminationBulbCount, setIlluminationBulbCount] = useState(5);
+  const [illuminationBlinkSpeed, setIlluminationBlinkSpeed] = useState(500);
+  const [illuminationColor, setIlluminationColor] = useState<string>("#FFFF00");
 
   const updateAllCanvasSizes = () => {
     setTimeout(() => {
@@ -339,6 +376,15 @@ export default function EditorTest() {
           (effectGroup as fabric.Object & { effectColor?: string })
             .effectColor || "#FFFF00";
         setSparkleColor(currentColor);
+      } else if (isIlluminationEffect(selectedObject)) {
+        const effectGroup = selectedObject as fabric.Group & {
+          bulbCount?: number;
+          blinkSpeed?: number;
+          color?: string;
+        };
+        setIlluminationBulbCount(effectGroup.bulbCount || 5);
+        setIlluminationBlinkSpeed(effectGroup.blinkSpeed || 500);
+        setIlluminationColor(effectGroup.color || "#FFFF00");
       }
     }
   }, [selectedObject]);
@@ -375,12 +421,13 @@ export default function EditorTest() {
 
       const activeObjects = activeCanvas.getActiveObjects();
       const activeObject = activeCanvas.getActiveObject();
-      const hasSparkleEffectSelected = activeObjects.some((obj) =>
-        isSparkleEffect(obj)
+      const hasEffectSelected = activeObjects.some(
+        (obj) => isSparkleEffect(obj) || isIlluminationEffect(obj)
       );
       if (
-        hasSparkleEffectSelected ||
-        (!!activeObject && isSparkleEffect(activeObject))
+        hasEffectSelected ||
+        (!!activeObject &&
+          (isSparkleEffect(activeObject) || isIlluminationEffect(activeObject)))
       ) {
         return;
       }
@@ -551,6 +598,18 @@ export default function EditorTest() {
     }
   };
 
+  const addMonoIlluminationEffect = () => {
+    if (activeCanvas) {
+      createMonochromeIlluminationEffect(activeCanvas);
+    }
+  };
+
+  const addRainbowIlluminationEffect = () => {
+    if (activeCanvas) {
+      createRainbowIlluminationEffect(activeCanvas);
+    }
+  };
+
   const handleSparkleDensityChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -573,6 +632,43 @@ export default function EditorTest() {
 
     if (isSparkleEffect(selectedObject) && activeCanvas) {
       updateSparkleColor(selectedObject, activeCanvas, newColorHex);
+    }
+  };
+
+  const handleIlluminationBulbCountChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const newCount = parseInt(e.target.value, 10);
+    setIlluminationBulbCount(newCount);
+
+    if (isIlluminationEffect(selectedObject) && activeCanvas) {
+      updateIlluminationBulbCount(
+        selectedObject as any,
+        activeCanvas,
+        newCount
+      );
+    }
+  };
+
+  const handleIlluminationBlinkSpeedChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const newSpeed = parseInt(e.target.value, 10);
+    setIlluminationBlinkSpeed(newSpeed);
+
+    if (isIlluminationEffect(selectedObject) && activeCanvas) {
+      updateIlluminationBlinkSpeed(selectedObject as any, newSpeed);
+    }
+  };
+
+  const handleIlluminationColorChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const newColor = e.target.value;
+    setIlluminationColor(newColor);
+
+    if (isIlluminationEffect(selectedObject) && activeCanvas) {
+      updateIlluminationColor(selectedObject as any, activeCanvas, newColor);
     }
   };
 
@@ -621,11 +717,15 @@ export default function EditorTest() {
         }
 
         // 1. Generate static image (excluding effects)
-        const sparkleEffects = canvas
+        const dynamicEffects = canvas
           .getObjects()
-          .filter((obj) => obj.type === "sparkle-effect");
+          .filter(
+            (obj) =>
+              obj.type === "sparkle-effect" ||
+              obj.type === "illumination-effect"
+          );
 
-        sparkleEffects.forEach((effect) => effect.set("visible", false));
+        dynamicEffects.forEach((effect) => effect.set("visible", false));
 
         let dataUrl: string;
         try {
@@ -638,11 +738,11 @@ export default function EditorTest() {
             multiplier,
           });
         } finally {
-          sparkleEffects.forEach((effect) => effect.set("visible", true));
+          dynamicEffects.forEach((effect) => effect.set("visible", true));
         }
 
         // 2. Generate JSON for dynamic effects
-        const dynamicObjectsJSON = sparkleEffects.map((obj) => obj.toJSON());
+        const dynamicObjectsJSON = dynamicEffects.map((obj) => obj.toJSON());
         const dynamicLayerJSON = JSON.stringify({
           version: fabric.version,
           objects: dynamicObjectsJSON,
@@ -865,9 +965,27 @@ export default function EditorTest() {
           <div className="flex items-center gap-2">
             <button className={buttonStyle} onClick={addSparkleEffect}>
               <SparkleIcon className="w-6 h-6" />
-              <span>エフェクトを追加</span>
+              <span>キラキラ</span>
             </button>
             <Tooltip content="キラキラするエフェクトを追加します。">
+              <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+            </Tooltip>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className={buttonStyle} onClick={addMonoIlluminationEffect}>
+              <BulbIcon className="w-6 h-6" />
+              <span>イルミネーション(単色)</span>
+            </button>
+            <Tooltip content="単色のイルミネーションエフェクトを追加します。">
+              <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+            </Tooltip>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className={buttonStyle} onClick={addRainbowIlluminationEffect}>
+              <BulbIcon className="w-6 h-6" />
+              <span>イルミネーション(虹)</span>
+            </button>
+            <Tooltip content="虹色のイルミネーションエフェクトを追加します。">
               <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
             </Tooltip>
           </div>
@@ -997,6 +1115,48 @@ export default function EditorTest() {
                     className="w-10 h-10"
                   />
                 </div>
+              </div>
+            )}
+            {isIlluminationEffect(selectedObject) && (
+              <div className="mt-4 flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                  <label>電球の数:</label>
+                  <input
+                    type="range"
+                    min="2"
+                    max="50"
+                    step="1"
+                    value={illuminationBulbCount}
+                    onChange={handleIlluminationBulbCountChange}
+                    className="w-full"
+                  />
+                  <span>{illuminationBulbCount}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label>点滅速度:</label>
+                  <input
+                    type="range"
+                    min="100"
+                    max="2000"
+                    step="100"
+                    value={illuminationBlinkSpeed}
+                    onChange={handleIlluminationBlinkSpeedChange}
+                    className="w-full"
+                  />
+                  <span>{illuminationBlinkSpeed}ms</span>
+                </div>
+                {selectedObject.effectType ===
+                  "illumination-monochrome" && (
+                  <div className="flex items-center gap-2">
+                    <label>色:</label>
+                    <input
+                      type="color"
+                      value={illuminationColor}
+                      onChange={handleIlluminationColorChange}
+                      className="w-10 h-10"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
