@@ -657,7 +657,11 @@ export default function EditorTest() {
     setIlluminationBlinkSpeed(newSpeed);
 
     if (isIlluminationEffect(selectedObject) && activeCanvas) {
-      updateIlluminationBlinkSpeed(selectedObject as any, newSpeed);
+      updateIlluminationBlinkSpeed(
+        selectedObject as any,
+        activeCanvas,
+        newSpeed
+      );
     }
   };
 
@@ -1133,7 +1137,7 @@ export default function EditorTest() {
                   <span>{illuminationBulbCount}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label>点滅速度:</label>
+                  <label>アニメーション速度:</label>
                   <input
                     type="range"
                     min="100"

@@ -7,7 +7,8 @@ import { fabric } from "fabric";
 type IlluminationEffectType = "illumination-monochrome" | "illumination-rainbow";
 
 type Bulb = fabric.Group & {
-  isLuminous?: boolean;
+  __animationStop?: boolean;
+  __animationTimeoutId?: number;
 };
 
 type IlluminationEffectGroup = fabric.Group & {
@@ -15,8 +16,6 @@ type IlluminationEffectGroup = fabric.Group & {
   bulbCount?: number;
   blinkSpeed?: number;
   color?: string; // For monochrome mode
-  __animationStop?: boolean;
-  __animationFrameId?: number;
 };
 
 type IlluminationEffectOptions = fabric.IGroupOptions & {
@@ -109,7 +108,7 @@ const createBulb = (color: string): Bulb => {
   const luminousBody = new fabric.Circle({
     radius: 5,
     fill: color,
-    shadow: new fabric.Shadow({ color, blur: 15 }),
+    shadow: new fabric.Shadow({ color, blur: 30 }), // Increased blur
     originX: "center",
     originY: "center",
   });
@@ -132,21 +131,21 @@ const createBulb = (color: string): Bulb => {
 };
 
 /**
- * Arranges all bulbs in the group along a sine wave.
+ * Arranges all bulbs in the group along a vertical sine wave.
  * @param group The IlluminationEffectGroup.
  */
 const arrangeBulbsInWave = (group: IlluminationEffectGroup) => {
   const bulbs = group.getObjects() as Bulb[];
   const bulbCount = bulbs.length;
-  if (bulbCount === 0 || !group.width) return;
+  if (bulbCount === 0 || !group.height) return;
 
-  const spacing = group.width / bulbCount;
-  const amplitude = group.height ? group.height / 4 : 20; // Amplitude of the wave
+  const spacing = group.height / bulbCount;
+  const amplitude = group.width ? group.width / 2 : 20;
   const wavelength = spacing * 6;
 
   bulbs.forEach((bulb, i) => {
-    const x = i * spacing;
-    const y = amplitude * Math.sin((x / wavelength) * 2 * Math.PI);
+    const y = i * spacing;
+    const x = amplitude * Math.sin((y / wavelength) * 2 * Math.PI);
     bulb.set({
       left: x,
       top: y,
@@ -158,68 +157,101 @@ const arrangeBulbsInWave = (group: IlluminationEffectGroup) => {
 };
 
 /**
- * Toggles the luminous state of a bulb.
- * @param bulb The bulb to toggle.
- * @param state The desired state (true for ON, false for OFF).
+ * Stops the animation for a single bulb.
+ * @param bulb The bulb to stop animating.
  */
-const setBulbState = (bulb: Bulb, state: boolean) => {
-  const luminousBody = bulb.getObjects()[1] as fabric.Circle;
-  if (state) {
-    luminousBody.set("opacity", 1);
-    luminousBody.set("shadow", new fabric.Shadow({
-      color: luminousBody.fill as string,
-      blur: 15,
-    }));
-  } else {
-    luminousBody.set("opacity", 0);
-    luminousBody.set("shadow", undefined);
+const stopBulbAnimation = (bulb: Bulb) => {
+  bulb.__animationStop = true;
+  if (bulb.__animationTimeoutId) {
+    clearTimeout(bulb.__animationTimeoutId);
   }
 };
 
+/**
+ * Starts a sparkle-like fade animation for a single bulb.
+ * @param bulb The bulb to animate.
+ * @param canvas The fabric.Canvas instance.
+ * @param blinkSpeed The base speed for the animation cycle.
+ */
+const animateBulb = (
+  bulb: Bulb,
+  canvas: fabric.Canvas,
+  blinkSpeed: number
+) => {
+  bulb.__animationStop = false;
+  const luminousBody = bulb.getObjects()[1] as fabric.Circle;
+
+  const loop = () => {
+    if (bulb.__animationStop) return;
+
+    const duration = (blinkSpeed / 2) * (0.5 + Math.random()); // Randomize duration slightly
+
+    // Fade Out
+    fabric.util.animate({
+      startValue: 1,
+      endValue: 0,
+      duration,
+      onChange: (value) => {
+        if (bulb.__animationStop) return;
+        luminousBody.set("opacity", value);
+        canvas.requestRenderAll();
+      },
+      onComplete: () => {
+        if (bulb.__animationStop) return;
+        // Wait for a bit before fading back in
+        bulb.__animationTimeoutId = window.setTimeout(() => {
+          if (bulb.__animationStop) return;
+          luminousBody.set("opacity", 0);
+          // Fade In
+          fabric.util.animate({
+            startValue: 0,
+            endValue: 1,
+            duration,
+            onChange: (value) => {
+              if (bulb.__animationStop) return;
+              luminousBody.set("opacity", value);
+              canvas.requestRenderAll();
+            },
+            onComplete: () => {
+              if (bulb.__animationStop) return;
+              // Restart the loop after a delay
+              bulb.__animationTimeoutId = window.setTimeout(
+                loop,
+                blinkSpeed * (0.5 + Math.random() * 2)
+              );
+            },
+          });
+        }, 200 * Math.random());
+      },
+    });
+  };
+
+  loop();
+};
 
 /**
- * Starts the alternating blinking animation for the entire group.
+ * Starts the animation for all bulbs in the group.
  * @param group The IlluminationEffectGroup.
  * @param canvas The fabric.Canvas instance.
  */
-const startBlinkingAnimation = (
+const startAnimation = (
   group: IlluminationEffectGroup,
   canvas: fabric.Canvas
 ) => {
-  group.__animationStop = false;
-  let frame = 0;
-
-  const animate = () => {
-    if (group.__animationStop) return;
-
-    const blinkSpeed = group.blinkSpeed || 500; // Default 500ms
-
-    group.__animationFrameId = window.setTimeout(() => {
-	  frame++;
-      const isEvenFrame = frame % 2 === 0;
-
-      group.forEachObject((obj, i) => {
-        const isEvenBulb = i % 2 === 0;
-        setBulbState(obj as Bulb, isEvenFrame ? isEvenBulb : !isEvenBulb);
-      });
-
-      canvas.requestRenderAll();
-      animate();
-    }, blinkSpeed);
-  };
-
-  animate();
+  const blinkSpeed = group.blinkSpeed || 1000;
+  group.forEachObject((obj) => {
+    animateBulb(obj as Bulb, canvas, blinkSpeed);
+  });
 };
 
 /**
- * Stops the animation for the group.
+ * Stops the animation for the entire group.
  * @param group The IlluminationEffectGroup.
  */
-const stopBlinkingAnimation = (group: IlluminationEffectGroup) => {
-  group.__animationStop = true;
-  if (group.__animationFrameId) {
-    clearTimeout(group.__animationFrameId);
-  }
+const stopAnimation = (group: IlluminationEffectGroup) => {
+  group.forEachObject((obj) => {
+    stopBulbAnimation(obj as Bulb);
+  });
 };
 
 // =================================================================================
@@ -240,23 +272,25 @@ const createIlluminationEffect = (
   const {
     effectType,
     bulbCount = 5,
-    blinkSpeed = 500,
+    blinkSpeed = 1000, // Default speed 1s
     color = "#FFFF00",
   } = options;
 
   const bulbs: Bulb[] = [];
   for (let i = 0; i < bulbCount; i++) {
     const bulbColor =
-      effectType === "illumination-rainbow" ? rainbowColors[i % rainbowColors.length] : color;
+      effectType === "illumination-rainbow"
+        ? rainbowColors[i % rainbowColors.length]
+        : color;
     bulbs.push(createBulb(bulbColor));
   }
 
   const IlluminationEffect = ensureIlluminationEffectClass();
   const group = new (IlluminationEffect as any)(bulbs, {
-    left: canvas.getWidth() / 4,
-    top: canvas.getHeight() / 2,
-    width: canvas.getWidth() / 2,
-    height: 100,
+    left: canvas.getWidth() / 2,
+    top: canvas.getHeight() / 4,
+    width: 100, // Initial width for vertical orientation
+    height: canvas.getHeight() / 2, // Initial height for vertical orientation
     effectType,
     bulbCount,
     blinkSpeed,
@@ -265,15 +299,16 @@ const createIlluminationEffect = (
     evented: true,
     hasControls: true,
     hasBorders: true,
+    originX: "center",
+    originY: "center",
   }) as IlluminationEffectGroup;
 
   arrangeBulbsInWave(group);
   canvas.add(group);
   canvas.setActiveObject(group);
-  startBlinkingAnimation(group, canvas);
+  startAnimation(group, canvas);
   canvas.renderAll();
 };
-
 
 /**
  * Creates a new monochrome illumination effect.
@@ -295,7 +330,6 @@ export const createRainbowIlluminationEffect = (canvas: fabric.Canvas) => {
   });
 };
 
-
 /**
  * Updates the number of bulbs in an existing illumination effect.
  * @param group The IlluminationEffectGroup.
@@ -303,14 +337,16 @@ export const createRainbowIlluminationEffect = (canvas: fabric.Canvas) => {
  * @param newCount The new number of bulbs.
  */
 export const updateIlluminationBulbCount = (
-    group: IlluminationEffectGroup,
-    canvas: fabric.Canvas,
-    newCount: number
-    ) => {
+  group: IlluminationEffectGroup,
+  canvas: fabric.Canvas,
+  newCount: number
+) => {
   if (!group || !canvas) return;
 
   const currentCount = group.bulbCount || 0;
   if (newCount === currentCount) return;
+
+  stopAnimation(group);
 
   const color = group.color || "#FFFF00";
 
@@ -332,20 +368,26 @@ export const updateIlluminationBulbCount = (
 
   group.set("bulbCount", newCount);
   arrangeBulbsInWave(group);
+  startAnimation(group, canvas);
   canvas.renderAll();
 };
 
 /**
  * Updates the blinking speed of the animation.
  * @param group The IlluminationEffectGroup.
+ * @param canvas The fabric.Canvas instance.
  * @param newSpeed The new speed in milliseconds.
  */
 export const updateIlluminationBlinkSpeed = (
   group: IlluminationEffectGroup,
+  canvas: fabric.Canvas,
   newSpeed: number
 ) => {
-  if (!group) return;
+  if (!group || !canvas) return;
   group.set("blinkSpeed", newSpeed);
+  // Restart animation to apply new speed
+  stopAnimation(group);
+  startAnimation(group, canvas);
 };
 
 /**
@@ -359,17 +401,18 @@ export const updateIlluminationColor = (
   canvas: fabric.Canvas,
   newColor: string
 ) => {
-  if (
-    !group ||
-    !canvas ||
-    group.effectType !== "illumination-monochrome"
-  )
+  if (!group || !canvas || group.effectType !== "illumination-monochrome")
     return;
 
   group.set("color", newColor);
   group.getObjects().forEach((bulb) => {
     const luminousBody = (bulb as fabric.Group).getObjects()[1] as fabric.Circle;
     luminousBody.set("fill", newColor);
+    // Also update shadow color if it exists
+    const shadow = luminousBody.shadow as fabric.Shadow;
+    if (shadow) {
+      shadow.color = newColor;
+    }
   });
   canvas.renderAll();
 };
@@ -385,7 +428,7 @@ export const resumeIlluminationAnimation = (
 ) => {
   if (obj.type === "illumination-effect") {
     const group = obj as IlluminationEffectGroup;
-    stopBlinkingAnimation(group);
-    startBlinkingAnimation(group, canvas);
+    stopAnimation(group);
+    startAnimation(group, canvas);
   }
 };
