@@ -137,22 +137,37 @@ const createBulb = (color: string): Bulb => {
 const arrangeBulbsInWave = (group: IlluminationEffectGroup) => {
   const bulbs = group.getObjects() as Bulb[];
   const bulbCount = bulbs.length;
-  if (bulbCount === 0 || !group.height) return;
+  if (bulbCount === 0 || !group.height || !group.width) return;
 
-  const spacing = group.height / bulbCount;
-  const amplitude = group.width ? group.width / 2 : 20;
-  const wavelength = spacing * 6;
+  const groupHeight = group.height;
+  const amplitude = group.width / 2;
 
   bulbs.forEach((bulb, i) => {
-    const y = i * spacing;
-    const x = amplitude * Math.sin((y / wavelength) * 2 * Math.PI);
+    // Distribute bulbs vertically from the top to the bottom of the group's bounding box.
+    // The `y` coordinate is relative to the group's center.
+    const y =
+      bulbCount > 1
+        ? -groupHeight / 2 + (i / (bulbCount - 1)) * groupHeight
+        : 0;
+
+    // The original wave shape was dependent on the bulb's index `i`, not its `y` position.
+    // Let's preserve that for consistent appearance.
+    // Original: x = amplitude * sin(( (i * spacing) / (spacing * 6) ) * 2 * PI)
+    // Simplified: x = amplitude * sin(i * PI / 3)
+    const x = amplitude * Math.sin((i / 6) * 2 * Math.PI);
+
     bulb.set({
       left: x,
       top: y,
     });
   });
 
-  group.addWithUpdate();
+  // Calling `addWithUpdate` caused the group to be resized based on its content,
+  // which is the root of the bug. We want to arrange bulbs within the *existing*
+  // group dimensions.
+  // group.addWithUpdate();
+
+  // We still need to update the controls of the object.
   group.setCoords();
 };
 
