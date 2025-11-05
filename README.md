@@ -11,6 +11,12 @@ LINE Letterは、ユーザーがウェブ上で手軽にオリジナルのメッ
 ![LINE Letter Demo GIF](public/landing-page/m1kbDbreCW3gAcG57W9u1759468198-1759468215.gif)
 *(エディタ画面でテキストやエフェクトを追加し、プレビューする様子)*
 
+## アクセス (Access)
+
+このアプリケーションは、以下のURLからアクセスできます。ぜひお試しください！
+
+[![Open LINE Letter](https://img.shields.io/badge/Open-LINE%20Letter-brightgreen?style=for-the-badge&logo=vercel)](https://line-letter.vercel.app)
+
 ## 3. 主な機能 (Features)
 
 - **LINEログインによる簡単な認証**: 面倒な登録は不要。LINEアカウントですぐに利用を開始できます。
