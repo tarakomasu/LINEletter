@@ -27,6 +27,7 @@ import {
   updateIlluminationBlinkSpeed,
   updateIlluminationColor,
 } from "@/lib/effects/illumination";
+import { createGeminiTestEffect } from "@/lib/effects/gemini-test";
 
 const isSparkleEffect = (
   object: fabric.Object | null
@@ -36,6 +37,10 @@ const isIlluminationEffect = (
   object: fabric.Object | null
 ): object is fabric.Group & { effectType?: string } =>
   object?.type === "illumination-effect";
+
+const isGeminiTestEffect = (
+  object: fabric.Object | null
+): object is fabric.Group => object?.type === "gemini-test-effect";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -188,7 +193,7 @@ export default function EditorTest() {
         const liffModule = (await import("@line/liff")).default;
         await liffModule.init({
           liffId: LIFF_ID,
-          withLoginOnExternalBrowser: true,
+          // withLoginOnExternalBrowser: true,
         });
         setLiff(liffModule);
         console.log("LIFF initialized successfully");
@@ -422,12 +427,17 @@ export default function EditorTest() {
       const activeObjects = activeCanvas.getActiveObjects();
       const activeObject = activeCanvas.getActiveObject();
       const hasEffectSelected = activeObjects.some(
-        (obj) => isSparkleEffect(obj) || isIlluminationEffect(obj)
+        (obj) =>
+          isSparkleEffect(obj) ||
+          isIlluminationEffect(obj) ||
+          isGeminiTestEffect(obj)
       );
       if (
         hasEffectSelected ||
         (!!activeObject &&
-          (isSparkleEffect(activeObject) || isIlluminationEffect(activeObject)))
+          (isSparkleEffect(activeObject) ||
+            isIlluminationEffect(activeObject) ||
+            isGeminiTestEffect(activeObject)))
       ) {
         return;
       }
@@ -607,6 +617,12 @@ export default function EditorTest() {
   const addRainbowIlluminationEffect = () => {
     if (activeCanvas) {
       createRainbowIlluminationEffect(activeCanvas);
+    }
+  };
+
+  const addGeminiTestEffect = () => {
+    if (activeCanvas) {
+      createGeminiTestEffect(activeCanvas);
     }
   };
 
@@ -990,6 +1006,15 @@ export default function EditorTest() {
               <span>イルミネーション(虹)</span>
             </button>
             <Tooltip content="虹色のイルミネーションエフェクトを追加します。">
+              <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
+            </Tooltip>
+          </div>
+          <div className="flex items-center gap-2">
+            <button className={buttonStyle} onClick={addGeminiTestEffect}>
+              <BulbIcon className="w-6 h-6" />
+              <span>Gemini Test</span>
+            </button>
+            <Tooltip content="Gemini Testエフェクトを追加します。">
               <HelpIcon className="w-5 h-5 text-gray-400 cursor-pointer" />
             </Tooltip>
           </div>

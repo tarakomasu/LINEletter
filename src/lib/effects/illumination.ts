@@ -108,7 +108,7 @@ const createBulb = (color: string): Bulb => {
   const luminousBody = new fabric.Circle({
     radius: 5,
     fill: color,
-    shadow: new fabric.Shadow({ color, blur: 30 }), // Increased blur
+    shadow: new fabric.Shadow({ color, blur: 45 }), // Increased blur for softer glow
     originX: "center",
     originY: "center",
   });
@@ -288,7 +288,7 @@ const createIlluminationEffect = (
     effectType,
     bulbCount = 5,
     blinkSpeed = 1000, // Default speed 1s
-    color = "#FFFF00",
+    color = "#FFC107", // Warm golden color
   } = options;
 
   const bulbs: Bulb[] = [];
